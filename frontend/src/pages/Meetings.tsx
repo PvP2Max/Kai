@@ -6,12 +6,12 @@ import { Users, FileText, Clock, CheckCircle, Upload, X, Loader2 } from 'lucide-
 
 interface Meeting {
   id: string
-  title: string
-  meeting_date: string
-  attendees: string[]
-  duration_minutes: number
-  has_transcription: boolean
-  has_summary: boolean
+  event_title: string | null
+  event_start: string | null
+  event_end: string | null
+  transcript: string | null
+  summary: unknown | null
+  calendar_event_id: string | null
 }
 
 export default function Meetings() {
@@ -168,52 +168,61 @@ export default function Meetings() {
             ))}
           </div>
         ) : meetings.length > 0 ? (
-          meetings.map((meeting) => (
-            <div key={meeting.id} className="card hover:border-primary-300 transition-colors cursor-pointer">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start">
-                  <div className="p-2 bg-primary-100 rounded-lg">
-                    <Users className="w-6 h-6 text-primary-600" />
+          meetings.map((meeting) => {
+            const hasTranscript = !!meeting.transcript
+            const hasSummary = !!meeting.summary
+            const duration = meeting.event_start && meeting.event_end
+              ? Math.round((new Date(meeting.event_end).getTime() - new Date(meeting.event_start).getTime()) / 60000)
+              : null
+
+            return (
+              <div key={meeting.id} className="card hover:border-primary-300 transition-colors cursor-pointer">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start">
+                    <div className="p-2 bg-primary-100 rounded-lg">
+                      <Users className="w-6 h-6 text-primary-600" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="font-semibold text-gray-900">
+                        {meeting.event_title || 'Untitled Meeting'}
+                      </h3>
+                      {meeting.event_start && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {format(new Date(meeting.event_start), 'EEEE, MMMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <h3 className="font-semibold text-gray-900">{meeting.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {format(new Date(meeting.meeting_date), 'EEEE, MMMM d, yyyy')}
-                    </p>
-                    {meeting.attendees?.length > 0 && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        {meeting.attendees.join(', ')}
-                      </p>
+                  <div className="flex items-center gap-4">
+                    {duration && (
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {duration} min
+                      </div>
                     )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {meeting.duration_minutes} min
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`flex items-center text-sm ${
-                        meeting.has_transcription ? 'text-green-600' : 'text-gray-400'
-                      }`}
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      Transcript
-                    </span>
-                    <span
-                      className={`flex items-center text-sm ${
-                        meeting.has_summary ? 'text-green-600' : 'text-gray-400'
-                      }`}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Summary
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex items-center text-sm ${
+                          hasTranscript ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        Transcript
+                      </span>
+                      <span
+                        className={`flex items-center text-sm ${
+                          hasSummary ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Summary
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            )
+          })
         ) : (
           <div className="card text-center py-12">
             <Users className="w-16 h-16 text-gray-300 mx-auto" />
