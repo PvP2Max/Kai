@@ -326,8 +326,6 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
                     content=final_text,
                     model_used=model.value,
                     tool_calls=all_tool_calls if all_tool_calls else None,
-                    input_tokens=total_input_tokens,
-                    output_tokens=total_output_tokens,
                 )
 
                 return {
