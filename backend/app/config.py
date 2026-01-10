@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24  # 24 hours
     refresh_token_expire_days: int = 30
 
+    # API Key (for Siri Shortcuts - simpler than JWT)
+    api_key: Optional[str] = None
+
     # Apple Calendar (CalDAV)
     caldav_url: Optional[str] = None
     caldav_username: Optional[str] = None
