@@ -11,7 +11,7 @@ from sqlalchemy import select, and_, or_
 
 from app.models.note import Note
 from app.models.project import Project
-from app.models.meeting import Meeting, MeetingSummary
+from app.models.meeting import Meeting
 from app.models.follow_up import FollowUp
 from app.models.read_later import ReadLaterItem
 from app.models.preferences import UserPreference
@@ -270,7 +270,7 @@ class ToolExecutor:
         meeting_id = input.get("meeting_id")
         calendar_event_id = input.get("calendar_event_id")
 
-        stmt = select(MeetingSummary).join(Meeting)
+        stmt = select(Meeting).where(Meeting.user_id == self.user_id)
 
         if meeting_id:
             stmt = stmt.where(Meeting.id == meeting_id)
@@ -279,19 +279,19 @@ class ToolExecutor:
         else:
             return {"error": "Either meeting_id or calendar_event_id required"}
 
-        stmt = stmt.where(Meeting.user_id == self.user_id)
         result = await self.db.execute(stmt)
-        summary = result.scalar_one_or_none()
+        meeting = result.scalar_one_or_none()
 
-        if not summary:
+        if not meeting or not meeting.summary:
             return {"error": "Meeting summary not found"}
 
+        summary = meeting.summary
         return {
-            "summary": summary.summary,
-            "action_items": summary.action_items,
-            "key_decisions": summary.key_decisions,
-            "attendees": summary.attendees,
-            "generated_at": summary.created_at.isoformat(),
+            "summary": summary.get("discussion", ""),
+            "action_items": summary.get("action_items", []),
+            "key_decisions": summary.get("key_points", []),
+            "attendees": summary.get("attendees", []),
+            "generated_at": meeting.created_at.isoformat(),
         }
 
     async def _execute_get_meeting_prep(self, input: Dict) -> Any:
