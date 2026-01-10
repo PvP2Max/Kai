@@ -54,7 +54,8 @@ services:
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - APNS_CERT_PATH=${APNS_CERT_PATH}
       - APNS_BUNDLE_ID=${APNS_BUNDLE_ID}
-      - WHISPER_MODEL_SIZE=large-v3
+      - WHISPER_MODEL=${WHISPER_MODEL:-large-v3}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cuda}
       - API_KEY=${API_KEY}
     deploy:
       resources:
