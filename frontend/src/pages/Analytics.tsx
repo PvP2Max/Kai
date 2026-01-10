@@ -23,7 +23,7 @@ export default function Analytics() {
   const [period, setPeriod] = useState('week')
   const { usage, dailyCosts, modelDistribution, isLoading } = useAnalytics(period)
 
-  const formatCost = (value: number) => `$${value.toFixed(4)}`
+  const formatCost = (value: number | undefined | null) => `$${(value ?? 0).toFixed(4)}`
 
   const pieData = Object.entries(modelDistribution || {}).map(([name, value]) => ({
     name: name.includes('haiku') ? 'Haiku' : name.includes('sonnet') ? 'Sonnet' : 'Opus',
