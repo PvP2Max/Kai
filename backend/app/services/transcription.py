@@ -81,6 +81,7 @@ class TranscriptionService:
         self,
         meeting_id: UUID,
         audio_path: str,
+        delete_audio_after: bool = True,
     ) -> Dict[str, Any]:
         """
         Transcribe a meeting and save the result.
@@ -88,6 +89,7 @@ class TranscriptionService:
         Args:
             meeting_id: Meeting ID to associate transcription with
             audio_path: Path to meeting audio file
+            delete_audio_after: Delete audio file after successful transcription (default: True)
 
         Returns:
             Transcription result
@@ -104,22 +106,34 @@ class TranscriptionService:
         if not meeting:
             return {"error": "Meeting not found", "success": False}
 
-        # Transcribe audio
-        transcription = await self.transcribe_audio(audio_path)
+        try:
+            # Transcribe audio
+            transcription = await self.transcribe_audio(audio_path)
 
-        if not transcription.get("success"):
-            return transcription
+            if not transcription.get("success"):
+                return transcription
 
-        # Update meeting with transcription
-        meeting.transcription = transcription["text"]
-        await self.db.commit()
+            # Update meeting with transcription
+            meeting.transcription = transcription["text"]
+            await self.db.commit()
 
-        return {
-            "success": True,
-            "meeting_id": str(meeting_id),
-            "transcription": transcription["text"],
-            "segments": transcription.get("segments", []),
-        }
+            # Generate summary automatically after transcription
+            summary_result = await self.generate_meeting_summary(meeting_id)
+
+            return {
+                "success": True,
+                "meeting_id": str(meeting_id),
+                "transcription": transcription["text"],
+                "segments": transcription.get("segments", []),
+                "summary": summary_result.get("summary") if summary_result.get("success") else None,
+            }
+        finally:
+            # Clean up audio file to save storage
+            if delete_audio_after and os.path.exists(audio_path):
+                try:
+                    os.unlink(audio_path)
+                except OSError:
+                    pass  # Best effort deletion
 
     async def generate_meeting_summary(
         self,
