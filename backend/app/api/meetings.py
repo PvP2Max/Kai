@@ -77,45 +77,31 @@ async def upload_meeting(
     await db.commit()
     await db.refresh(meeting)
 
-    # Process transcription asynchronously
+    # Process transcription
     try:
         from app.services.transcription import TranscriptionService
 
-        service = TranscriptionService()
-        result = await service.transcribe_and_summarize(
+        service = TranscriptionService(db, current_user.id)
+        result = await service.transcribe_meeting(
+            meeting_id=meeting.id,
             audio_path=file_path,
-            event_context={
-                "title": event_title,
-                "calendar_event_id": calendar_event_id,
-            },
         )
 
-        # Update meeting with transcript and summary
-        meeting.transcript = result.transcript
-        meeting.summary = result.summary.model_dump() if result.summary else None
-
-        # Create action items
-        if result.summary and result.summary.action_items:
-            for item in result.summary.action_items:
-                action_item = ActionItem(
-                    meeting_id=meeting.id,
-                    user_id=current_user.id,
-                    description=item.get("description", ""),
-                    owner=item.get("owner"),
-                    due_date=item.get("due_date"),
-                    priority=item.get("priority", "medium"),
-                )
-                db.add(action_item)
-
-        await db.commit()
-        await db.refresh(meeting)
-
-        return MeetingUploadResponse(
-            id=meeting.id,
-            message="Meeting processed successfully",
-            transcript=meeting.transcript,
-            summary=result.summary,
-        )
+        if result.get("success"):
+            await db.refresh(meeting)
+            return MeetingUploadResponse(
+                id=meeting.id,
+                message="Meeting processed successfully",
+                transcript=result.get("transcription"),
+                summary=result.get("summary"),
+            )
+        else:
+            return MeetingUploadResponse(
+                id=meeting.id,
+                message=f"Meeting uploaded but transcription failed: {result.get('error', 'Unknown error')}",
+                transcript=None,
+                summary=None,
+            )
     except Exception as e:
         return MeetingUploadResponse(
             id=meeting.id,
@@ -181,20 +167,19 @@ async def reprocess_meeting(
     try:
         from app.services.transcription import TranscriptionService
 
-        service = TranscriptionService()
-        summary = await service.generate_summary(
-            transcript=meeting.transcript,
-            event_context={
-                "title": meeting.event_title,
-                "calendar_event_id": meeting.calendar_event_id,
-            },
-        )
+        service = TranscriptionService(db, current_user.id)
+        result = await service.generate_meeting_summary(meeting.id)
 
-        meeting.summary = summary.model_dump()
-        await db.commit()
-        await db.refresh(meeting)
-
-        return meeting
+        if result.get("success"):
+            await db.refresh(meeting)
+            return meeting
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error reprocessing meeting: {result.get('error', 'Unknown error')}",
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
