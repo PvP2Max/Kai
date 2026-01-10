@@ -13,6 +13,7 @@ alembic>=1.13.0
 anthropic>=0.18.0
 openai-whisper>=20231117
 torch>=2.1.0
+hyperframe>=6.0.0  # Fix for Python 3.10+ compatibility
 
 # External integrations
 caldav>=1.3.0
