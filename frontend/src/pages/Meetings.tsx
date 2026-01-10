@@ -4,13 +4,20 @@ import { meetingsApi } from '../api/client'
 import { format } from 'date-fns'
 import { Users, FileText, Clock, CheckCircle, Upload, X, Loader2 } from 'lucide-react'
 
+interface MeetingSummary {
+  discussion?: string
+  key_points?: string[]
+  action_items?: string[]
+  attendees?: string[]
+}
+
 interface Meeting {
   id: string
   event_title: string | null
   event_start: string | null
   event_end: string | null
   transcript: string | null
-  summary: unknown | null
+  summary: MeetingSummary | null
   calendar_event_id: string | null
 }
 
@@ -20,6 +27,8 @@ export default function Meetings() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [eventTitle, setEventTitle] = useState('')
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [activeTab, setActiveTab] = useState<'transcript' | 'summary'>('summary')
 
   const { data, isLoading } = useQuery({
     queryKey: ['meetings'],
@@ -155,6 +164,112 @@ export default function Meetings() {
         </div>
       )}
 
+      {/* Meeting Detail Modal */}
+      {selectedMeeting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {selectedMeeting.event_title || 'Untitled Meeting'}
+                </h2>
+                {selectedMeeting.event_start && (
+                  <p className="text-sm text-gray-500">
+                    {format(new Date(selectedMeeting.event_start), 'EEEE, MMMM d, yyyy')}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedMeeting(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b px-6">
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+                  activeTab === 'summary'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Summary
+              </button>
+              <button
+                onClick={() => setActiveTab('transcript')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+                  activeTab === 'transcript'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Transcript
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {activeTab === 'summary' ? (
+                selectedMeeting.summary ? (
+                  <div className="space-y-6">
+                    {selectedMeeting.summary.discussion && (
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-2">Discussion</h3>
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                          {selectedMeeting.summary.discussion}
+                        </p>
+                      </div>
+                    )}
+                    {selectedMeeting.summary.key_points && selectedMeeting.summary.key_points.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-2">Key Points</h3>
+                        <ul className="list-disc list-inside space-y-1">
+                          {selectedMeeting.summary.key_points.map((point, i) => (
+                            <li key={i} className="text-gray-700">{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {selectedMeeting.summary.action_items && selectedMeeting.summary.action_items.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-2">Action Items</h3>
+                        <ul className="list-disc list-inside space-y-1">
+                          {selectedMeeting.summary.action_items.map((item, i) => (
+                            <li key={i} className="text-gray-700">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No summary available yet.</p>
+                    <p className="text-sm mt-1">Summary will be generated after transcription.</p>
+                  </div>
+                )
+              ) : (
+                selectedMeeting.transcript ? (
+                  <div className="prose max-w-none">
+                    <p className="whitespace-pre-wrap text-gray-700">{selectedMeeting.transcript}</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No transcript available yet.</p>
+                    <p className="text-sm mt-1">Transcription may still be processing.</p>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Meetings list */}
       <div className="space-y-4">
         {isLoading ? (
@@ -176,7 +291,11 @@ export default function Meetings() {
               : null
 
             return (
-              <div key={meeting.id} className="card hover:border-primary-300 transition-colors cursor-pointer">
+              <div
+                key={meeting.id}
+                className="card hover:border-primary-300 transition-colors cursor-pointer"
+                onClick={() => setSelectedMeeting(meeting)}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start">
                     <div className="p-2 bg-primary-100 rounded-lg">

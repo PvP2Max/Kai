@@ -30,9 +30,12 @@ class TranscriptionService:
         if self._model is None:
             import whisper
 
-            # Use GPU if available
-            model_size = settings.whisper_model_size or "base"
-            self._model = whisper.load_model(model_size)
+            # Use configured model size
+            model_size = settings.whisper_model or "base"
+            device = settings.whisper_device or "cpu"
+            print(f"Loading Whisper model '{model_size}' on device '{device}'...")
+            self._model = whisper.load_model(model_size, device=device)
+            print(f"Whisper model loaded successfully")
 
         return self._model
 
