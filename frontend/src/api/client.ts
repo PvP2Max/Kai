@@ -168,6 +168,12 @@ export const meetingsApi = {
     })
     return response.data
   },
+  upload: async (formData: FormData) => {
+    const response = await client.post('/meetings/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
 }
 
 // Analytics API

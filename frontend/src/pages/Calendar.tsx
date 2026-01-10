@@ -1,12 +1,54 @@
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCalendar } from '../hooks/useCalendar'
+import { calendarApi } from '../api/client'
 import { format, addWeeks, subWeeks, startOfWeek, addDays } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 
 export default function Calendar() {
+  const queryClient = useQueryClient()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    startTime: '09:00',
+    endTime: '10:00',
+    location: '',
+    description: '',
+  })
+
   const { events, isLoading, dateRange } = useCalendar('week', currentDate)
+
+  const createMutation = useMutation({
+    mutationFn: (event: { title: string; start: string; end: string; location?: string; description?: string }) =>
+      calendarApi.createEvent(event),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      setShowAddModal(false)
+      setNewEvent({
+        title: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        startTime: '09:00',
+        endTime: '10:00',
+        location: '',
+        description: '',
+      })
+    },
+  })
+
+  const handleCreateEvent = () => {
+    const start = `${newEvent.date}T${newEvent.startTime}:00`
+    const end = `${newEvent.date}T${newEvent.endTime}:00`
+    createMutation.mutate({
+      title: newEvent.title,
+      start,
+      end,
+      location: newEvent.location || undefined,
+      description: newEvent.description || undefined,
+    })
+  }
 
   const weekStart = startOfWeek(currentDate)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -49,12 +91,112 @@ export default function Calendar() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
-          <button className="btn btn-primary flex items-center">
+          <button onClick={() => setShowAddModal(true)} className="btn btn-primary flex items-center">
             <Plus className="w-4 h-4 mr-2" />
             Add Event
           </button>
         </div>
       </div>
+
+      {/* Add Event Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Add Event</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                  placeholder="Event title"
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={newEvent.date}
+                  onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                  className="input w-full"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    value={newEvent.startTime}
+                    onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    type="time"
+                    value={newEvent.endTime}
+                    onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location (optional)</label>
+                <input
+                  type="text"
+                  value={newEvent.location}
+                  onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                  placeholder="Location"
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <textarea
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                  placeholder="Description"
+                  rows={3}
+                  className="input w-full"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowAddModal(false)} className="btn">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateEvent}
+                  disabled={!newEvent.title || createMutation.isPending}
+                  className="btn btn-primary flex items-center"
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Event'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Calendar Grid */}
       <div className="card p-0 overflow-hidden">

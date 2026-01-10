@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { meetingsApi } from '../api/client'
 import { format } from 'date-fns'
-import { Users, FileText, Clock, CheckCircle } from 'lucide-react'
+import { Users, FileText, Clock, CheckCircle, Upload, X, Loader2 } from 'lucide-react'
 
 interface Meeting {
   id: string
@@ -14,20 +15,145 @@ interface Meeting {
 }
 
 export default function Meetings() {
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [eventTitle, setEventTitle] = useState('')
+
   const { data, isLoading } = useQuery({
     queryKey: ['meetings'],
     queryFn: () => meetingsApi.list(),
   })
 
-  const meetings: Meeting[] = data?.meetings || []
+  const uploadMutation = useMutation({
+    mutationFn: async ({ file, title }: { file: File; title: string }) => {
+      const formData = new FormData()
+      formData.append('audio', file)
+      if (title) formData.append('event_title', title)
+      return meetingsApi.upload(formData)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      setShowUploadModal(false)
+      setSelectedFile(null)
+      setEventTitle('')
+    },
+  })
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+    }
+  }
+
+  const handleUpload = () => {
+    if (selectedFile) {
+      uploadMutation.mutate({ file: selectedFile, title: eventTitle })
+    }
+  }
+
+  const meetings: Meeting[] = data?.meetings || data || []
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Meetings</h1>
-        <p className="text-gray-600">View meeting transcriptions and summaries</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Meetings</h1>
+          <p className="text-gray-600">View meeting transcriptions and summaries</p>
+        </div>
+        <button
+          onClick={() => setShowUploadModal(true)}
+          className="btn btn-primary flex items-center"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Upload Recording
+        </button>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Upload Meeting Recording</h2>
+              <button onClick={() => setShowUploadModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Meeting Title (optional)
+                </label>
+                <input
+                  type="text"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  placeholder="e.g., Team Standup"
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Audio File
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*,.m4a,.mp3,.wav,.mp4"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-700 truncate">{selectedFile.name}</span>
+                    <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full p-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 transition-colors"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto" />
+                    <p className="mt-2 text-sm text-gray-500">Click to select audio file</p>
+                    <p className="text-xs text-gray-400">M4A, MP3, WAV supported</p>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowUploadModal(false)} className="btn">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={!selectedFile || uploadMutation.isPending}
+                  className="btn btn-primary flex items-center"
+                >
+                  {uploadMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload & Transcribe
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Meetings list */}
       <div className="space-y-4">
