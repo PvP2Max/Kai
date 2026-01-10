@@ -13,7 +13,7 @@ from app.models.note import Note
 from app.models.project import Project
 from app.models.meeting import Meeting
 from app.models.follow_up import FollowUp
-from app.models.read_later import ReadLaterItem
+from app.models.read_later import ReadLater
 from app.models.preferences import UserPreference
 from app.models.activity import ActivityLog
 
@@ -490,7 +490,7 @@ Thanks!"""
     # Read Later Tools
     async def _execute_save_for_later(self, input: Dict) -> Any:
         """Save a URL to read later."""
-        item = ReadLaterItem(
+        item = ReadLater(
             user_id=self.user_id,
             url=input["url"],
             title=input.get("title"),
@@ -506,14 +506,14 @@ Thanks!"""
 
     async def _execute_get_read_later_list(self, input: Dict) -> Any:
         """Get the read-later queue."""
-        stmt = select(ReadLaterItem).where(
-            ReadLaterItem.user_id == self.user_id
+        stmt = select(ReadLater).where(
+            ReadLater.user_id == self.user_id
         )
 
         if input.get("unread_only", True):
-            stmt = stmt.where(ReadLaterItem.read_at.is_(None))
+            stmt = stmt.where(ReadLater.is_read == False)
 
-        stmt = stmt.order_by(ReadLaterItem.created_at.desc()).limit(50)
+        stmt = stmt.order_by(ReadLater.created_at.desc()).limit(50)
         result = await self.db.execute(stmt)
         items = result.scalars().all()
 
@@ -524,7 +524,7 @@ Thanks!"""
                     "url": i.url,
                     "title": i.title,
                     "saved_at": i.created_at.isoformat(),
-                    "read": i.read_at is not None,
+                    "read": i.is_read,
                 }
                 for i in items
             ]
