@@ -37,7 +37,7 @@ services:
     volumes:
       - ./data/audio:/app/audio
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://kai:${POSTGRES_PASSWORD}@db:5432/kai
       - DATABASE_URL_SYNC=postgresql://kai:${POSTGRES_PASSWORD}@db:5432/kai
