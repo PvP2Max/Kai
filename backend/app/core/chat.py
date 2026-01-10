@@ -244,10 +244,10 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
 
                 # Track costs
                 await self.cost_tracker.record_usage(
-                    model=model.value,
+                    tier=model,
                     input_tokens=response.usage.input_tokens,
                     output_tokens=response.usage.output_tokens,
-                    action_type="chat",
+                    task_type="chat",
                 )
 
                 # Check if we need to handle tool use
@@ -473,10 +473,10 @@ Please complete this step of the task."""
         )
 
         await self.cost_tracker.record_usage(
-            model=selected_model.value,
+            tier=selected_model,
             input_tokens=message_obj.usage.input_tokens,
             output_tokens=message_obj.usage.output_tokens,
-            action_type="chat_stream",
+            task_type="chat_stream",
         )
 
     async def generate_daily_briefing(self, briefing_date: date = None) -> Dict[str, Any]:
@@ -532,10 +532,10 @@ Keep it concise and actionable."""
         )
 
         await self.cost_tracker.record_usage(
-            model=ModelTier.HAIKU.value,
+            tier=ModelTier.HAIKU,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
-            action_type="briefing",
+            task_type="briefing",
         )
 
         return {
@@ -602,10 +602,10 @@ Be insightful and actionable."""
         )
 
         await self.cost_tracker.record_usage(
-            model=ModelTier.SONNET.value,
+            tier=ModelTier.SONNET,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
-            action_type="weekly_review",
+            task_type="weekly_review",
         )
 
         return {
