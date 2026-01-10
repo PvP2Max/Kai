@@ -30,8 +30,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        USE_GPU: "true"
     container_name: kai-backend
     restart: unless-stopped
     networks:
