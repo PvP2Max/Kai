@@ -46,11 +46,14 @@ class CalendarService:
         if not calendars:
             raise ValueError("No calendars found")
 
-        if calendar_name:
+        # Use provided name, or fall back to default from settings
+        target_name = calendar_name or settings.default_calendar
+
+        if target_name:
             for cal in calendars:
-                if cal.name == calendar_name:
+                if cal.name == target_name:
                     return cal
-            raise ValueError(f"Calendar '{calendar_name}' not found")
+            raise ValueError(f"Calendar '{target_name}' not found")
 
         # Return first calendar (usually the primary)
         return calendars[0]

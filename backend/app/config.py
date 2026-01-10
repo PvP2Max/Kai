@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     caldav_url: Optional[str] = None
     caldav_username: Optional[str] = None
     caldav_password: Optional[str] = None
+    default_calendar: Optional[str] = None  # Calendar name for new events
 
     # Gmail API
     google_client_id: Optional[str] = None
