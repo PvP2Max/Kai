@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 
 class ModelTier(Enum):
-    HAIKU = "claude-haiku-4-5-20250929"
+    HAIKU = "claude-3-5-haiku-20241022"
     SONNET = "claude-sonnet-4-20250514"
     OPUS = "claude-opus-4-20250514"
 
