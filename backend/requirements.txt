@@ -13,7 +13,6 @@ alembic>=1.13.0
 anthropic>=0.18.0
 openai-whisper>=20231117
 torch>=2.1.0
-hyperframe>=6.0.0  # Fix for Python 3.10+ compatibility
 
 # External integrations
 caldav>=1.3.0
@@ -21,7 +20,7 @@ google-api-python-client>=2.115.0
 google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
 httpx>=0.26.0
-apns2>=0.7.2
+# apns2 removed - conflicts with Python 3.10, will use alternative for push notifications
 
 # Authentication
 python-jose[cryptography]>=3.3.0
