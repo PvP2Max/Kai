@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.meeting import Meeting, MeetingSummary
+from app.models.meeting import Meeting
 
 
 class TranscriptionService:
@@ -114,7 +114,7 @@ class TranscriptionService:
                 return transcription
 
             # Update meeting with transcription
-            meeting.transcription = transcription["text"]
+            meeting.transcript = transcription["text"]
             await self.db.commit()
 
             # Generate summary automatically after transcription
@@ -162,11 +162,14 @@ class TranscriptionService:
         if not meeting:
             return {"error": "Meeting not found", "success": False}
 
-        if not meeting.transcription:
+        if not meeting.transcript:
             return {"error": "No transcription available", "success": False}
 
         # Generate summary using Claude
         client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+
+        # Get attendees from existing summary if present
+        existing_attendees = meeting.summary.get("attendees", []) if meeting.summary else []
 
         prompt = f"""Analyze this meeting transcription and provide:
 1. A concise summary (2-3 paragraphs)
@@ -174,12 +177,11 @@ class TranscriptionService:
 3. Action items with owners if mentioned
 4. Important topics discussed
 
-Meeting: {meeting.title}
-Date: {meeting.meeting_date.isoformat() if meeting.meeting_date else 'Unknown'}
-Attendees: {', '.join(meeting.attendees) if meeting.attendees else 'Unknown'}
+Meeting: {meeting.event_title or 'Untitled Meeting'}
+Date: {meeting.event_start.isoformat() if meeting.event_start else 'Unknown'}
 
 Transcription:
-{meeting.transcription}
+{meeting.transcript}
 
 Provide a structured summary:"""
 
@@ -193,7 +195,7 @@ Provide a structured summary:"""
 
         # Parse action items (simple extraction)
         action_items = []
-        key_decisions = []
+        key_points = []
 
         lines = summary_text.split("\n")
         current_section = None
@@ -202,34 +204,22 @@ Provide a structured summary:"""
             line = line.strip()
             if "action item" in line.lower():
                 current_section = "actions"
-            elif "decision" in line.lower():
-                current_section = "decisions"
+            elif "decision" in line.lower() or "key point" in line.lower():
+                current_section = "points"
             elif line.startswith("-") or line.startswith("•"):
                 item = line.lstrip("-•").strip()
                 if current_section == "actions":
                     action_items.append(item)
-                elif current_section == "decisions":
-                    key_decisions.append(item)
+                elif current_section == "points":
+                    key_points.append(item)
 
-        # Save or update summary
-        existing_result = await self.db.execute(
-            select(MeetingSummary).where(MeetingSummary.meeting_id == meeting_id)
-        )
-        existing_summary = existing_result.scalar_one_or_none()
-
-        if existing_summary:
-            existing_summary.summary = summary_text
-            existing_summary.action_items = action_items
-            existing_summary.key_decisions = key_decisions
-        else:
-            summary = MeetingSummary(
-                meeting_id=meeting_id,
-                summary=summary_text,
-                action_items=action_items,
-                key_decisions=key_decisions,
-                attendees=meeting.attendees or [],
-            )
-            self.db.add(summary)
+        # Store summary in Meeting.summary JSONB field
+        meeting.summary = {
+            "discussion": summary_text,
+            "key_points": key_points,
+            "action_items": action_items,
+            "attendees": existing_attendees,
+        }
 
         await self.db.commit()
 
@@ -238,7 +228,7 @@ Provide a structured summary:"""
             "meeting_id": str(meeting_id),
             "summary": summary_text,
             "action_items": action_items,
-            "key_decisions": key_decisions,
+            "key_points": key_points,
         }
 
     async def transcribe_from_bytes(
