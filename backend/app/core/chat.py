@@ -96,9 +96,6 @@ class ChatHandler:
         content: str,
         model_used: Optional[str] = None,
         tool_calls: Optional[List[Dict]] = None,
-        tool_results: Optional[List[Dict]] = None,
-        input_tokens: int = 0,
-        output_tokens: int = 0,
     ) -> Message:
         """Save a message to the conversation."""
         message = Message(
@@ -107,9 +104,6 @@ class ChatHandler:
             content=content,
             model_used=model_used,
             tool_calls=tool_calls,
-            tool_results=tool_results,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
         )
         self.db.add(message)
         await self.db.commit()
@@ -478,8 +472,6 @@ Please complete this step of the task."""
             role="assistant",
             content=full_response,
             model_used=selected_model.value,
-            input_tokens=message_obj.usage.input_tokens,
-            output_tokens=message_obj.usage.output_tokens,
         )
 
         await self.cost_tracker.record_usage(
