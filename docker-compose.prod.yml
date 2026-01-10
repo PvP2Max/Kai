@@ -5,12 +5,15 @@
 #   - NVIDIA GPU with CUDA support
 #   - NVIDIA Container Toolkit installed
 #   - All environment variables set in .env
+#   - apps-net network created: docker network create apps-net
 
 services:
   db:
     image: postgres:17-alpine
     container_name: kai-db
     restart: unless-stopped
+    networks:
+      - apps-net
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -31,6 +34,8 @@ services:
         USE_GPU: "true"
     container_name: kai-backend
     restart: unless-stopped
+    networks:
+      - apps-net
     volumes:
       - ./data/audio:/app/audio
     ports:
@@ -68,10 +73,16 @@ services:
       dockerfile: Dockerfile
     container_name: kai-frontend
     restart: unless-stopped
+    networks:
+      - apps-net
     ports:
       - "5173:5173"
     depends_on:
       - backend
+
+networks:
+  apps-net:
+    external: true
 
 volumes:
   postgres_data:

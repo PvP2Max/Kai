@@ -14,6 +14,8 @@ services:
   db:
     image: postgres:17-alpine
     container_name: kai-db
+    networks:
+      - apps-net
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -33,6 +35,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: kai-backend
+    networks:
+      - apps-net
     volumes:
       - ./backend:/app
     ports:
@@ -62,6 +66,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: kai-frontend
+    networks:
+      - apps-net
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -71,6 +77,10 @@ services:
       - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
+
+networks:
+  apps-net:
+    external: true
 
 volumes:
   postgres_data:
