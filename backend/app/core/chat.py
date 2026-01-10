@@ -115,7 +115,6 @@ class ChatHandler:
         action_type: str,
         action_data: Dict[str, Any],
         reversible: bool = False,
-        reverse_data: Optional[Dict[str, Any]] = None,
     ):
         """Log an activity for audit trail and undo functionality."""
         activity = ActivityLog(
@@ -123,7 +122,6 @@ class ChatHandler:
             action_type=action_type,
             action_data=action_data,
             reversible=reversible,
-            reverse_data=reverse_data,
         )
         self.db.add(activity)
         await self.db.commit()
