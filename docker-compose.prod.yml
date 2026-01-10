@@ -1,0 +1,77 @@
+# Kai Production - GPU Server with Whisper
+# Launch: docker-compose -f docker-compose.prod.yml up -d
+#
+# Requirements:
+#   - NVIDIA GPU with CUDA support
+#   - NVIDIA Container Toolkit installed
+#   - All environment variables set in .env
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: kai-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: kai
+      POSTGRES_USER: kai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kai -d kai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USE_GPU: "true"
+    container_name: kai-backend
+    restart: unless-stopped
+    volumes:
+      - ./data/audio:/app/audio
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://kai:${POSTGRES_PASSWORD}@db:5432/kai
+      - DATABASE_URL_SYNC=postgresql://kai:${POSTGRES_PASSWORD}@db:5432/kai
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=HS256
+      - CALDAV_URL=${CALDAV_URL}
+      - CALDAV_USERNAME=${CALDAV_USERNAME}
+      - CALDAV_PASSWORD=${CALDAV_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - APNS_CERT_PATH=${APNS_CERT_PATH}
+      - APNS_BUNDLE_ID=${APNS_BUNDLE_ID}
+      - WHISPER_MODEL_SIZE=large-v3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kai-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

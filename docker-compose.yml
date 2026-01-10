@@ -1,0 +1,76 @@
+# Kai - Launch all services with: docker-compose up -d
+#
+# Services:
+#   - db: PostgreSQL 17 database
+#   - backend: FastAPI Python application
+#   - frontend: React Vite dev server
+#
+# Access:
+#   - Frontend: http://localhost:5173
+#   - Backend API: http://localhost:8000
+#   - API Docs: http://localhost:8000/docs
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: kai-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: kai
+      POSTGRES_USER: kai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kai_dev_password}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kai -d kai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kai-backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://kai:${POSTGRES_PASSWORD:-kai_dev_password}@db:5432/kai
+      - DATABASE_URL_SYNC=postgresql://kai:${POSTGRES_PASSWORD:-kai_dev_password}@db:5432/kai
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+      - JWT_ALGORITHM=HS256
+      - CALDAV_URL=${CALDAV_URL:-}
+      - CALDAV_USERNAME=${CALDAV_USERNAME:-}
+      - CALDAV_PASSWORD=${CALDAV_PASSWORD:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN:-}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+      - APNS_CERT_PATH=${APNS_CERT_PATH:-}
+      - APNS_BUNDLE_ID=${APNS_BUNDLE_ID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kai-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
