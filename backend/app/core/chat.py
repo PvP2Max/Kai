@@ -57,8 +57,6 @@ class ChatHandler:
         # Create new conversation
         conversation = Conversation(
             user_id=self.user_id,
-            source=source,
-            started_at=datetime.utcnow(),
         )
         self.db.add(conversation)
         await self.db.commit()
