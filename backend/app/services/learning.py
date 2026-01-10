@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
 from app.models.activity import ActivityLog
-from app.models.preferences import UserPreference
+from app.models.preferences import Preference
 from app.models.conversation import Message
 
 
@@ -219,11 +219,11 @@ class LearningService:
             Update result
         """
         result = await self.db.execute(
-            select(UserPreference).where(
+            select(Preference).where(
                 and_(
-                    UserPreference.user_id == self.user_id,
-                    UserPreference.category == category,
-                    UserPreference.key == key,
+                    Preference.user_id == self.user_id,
+                    Preference.category == category,
+                    Preference.key == key,
                 )
             )
         )
@@ -241,7 +241,7 @@ class LearningService:
             return {"success": True, "action": "skipped", "reason": "lower confidence"}
         else:
             # Create new learned preference
-            pref = UserPreference(
+            pref = Preference(
                 user_id=self.user_id,
                 category=category,
                 key=key,

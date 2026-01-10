@@ -9,7 +9,7 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
-from app.models.preferences import UserPreference
+from app.models.preferences import Preference
 from app.config import settings
 
 
@@ -78,10 +78,10 @@ class ScheduleOptimizer:
     async def _get_scheduling_preferences(self) -> Dict[str, Any]:
         """Get user's scheduling preferences."""
         result = await self.db.execute(
-            select(UserPreference).where(
+            select(Preference).where(
                 and_(
-                    UserPreference.user_id == self.user_id,
-                    UserPreference.category == "scheduling",
+                    Preference.user_id == self.user_id,
+                    Preference.category == "scheduling",
                 )
             )
         )
