@@ -451,11 +451,17 @@ class CostTracker:
     ):
         """Record model usage to database."""
         from app.models.preferences import ModelUsage
-        from uuid import UUID
+        from uuid import UUID as PyUUID
+
+        # Handle user_id that might already be a UUID object
+        user_uuid = self.user_id if isinstance(self.user_id, PyUUID) else PyUUID(str(self.user_id))
+        conv_uuid = None
+        if conversation_id:
+            conv_uuid = conversation_id if isinstance(conversation_id, PyUUID) else PyUUID(str(conversation_id))
 
         usage = ModelUsage(
-            user_id=UUID(self.user_id),
-            conversation_id=UUID(conversation_id) if conversation_id else None,
+            user_id=user_uuid,
+            conversation_id=conv_uuid,
             model_tier=tier.name.lower(),
             model_version=tier.value,
             input_tokens=input_tokens,
