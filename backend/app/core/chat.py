@@ -15,7 +15,7 @@ from app.config import settings
 from app.models.conversation import Conversation, Message
 from app.models.activity import ActivityLog
 from app.models.user import User
-from app.core.model_router import ModelRouter, ModelTier, CostTracker
+from app.core.model_router import ModelRouter, ModelTier, CostTracker, RoutingConfig
 from app.core.tools import TOOLS
 from app.core.tool_executor import ToolExecutor
 
@@ -30,7 +30,8 @@ class ChatHandler:
         self.db = db
         self.user_id = user_id
         self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        self.model_router = ModelRouter()
+        self.routing_config = RoutingConfig(db, str(user_id))
+        self.model_router = ModelRouter(self.routing_config)
         self.cost_tracker = CostTracker(db, user_id)
         self.tool_executor = ToolExecutor(db, user_id)
 
