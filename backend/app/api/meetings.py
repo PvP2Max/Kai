@@ -49,12 +49,23 @@ async def upload_meeting(
     current_user: User = Depends(get_current_user),
 ):
     """Upload audio for transcription and summary generation."""
-    # Validate file type
-    allowed_types = ["audio/mpeg", "audio/mp4", "audio/m4a", "audio/wav", "audio/x-wav"]
-    if audio.content_type not in allowed_types:
+    # Validate file type - be lenient with MIME types as browsers vary
+    allowed_types = [
+        "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a",
+        "audio/wav", "audio/x-wav", "audio/wave", "audio/webm", "audio/ogg",
+        "video/mp4", "video/webm",  # Some audio files get tagged as video
+        "application/octet-stream",  # Generic binary
+    ]
+    allowed_extensions = [".mp3", ".m4a", ".mp4", ".wav", ".webm", ".ogg", ".aac"]
+
+    filename = audio.filename or ""
+    file_ext = os.path.splitext(filename.lower())[1]
+
+    # Accept if MIME type matches OR file extension matches
+    if audio.content_type not in allowed_types and file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type. Allowed: {allowed_types}",
+            detail=f"Invalid file type '{audio.content_type}' for file '{filename}'. Allowed extensions: {allowed_extensions}",
         )
 
     # Save audio file

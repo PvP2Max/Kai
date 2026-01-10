@@ -24,15 +24,9 @@ from app.config import settings
 router = APIRouter()
 
 
-def get_calendar_service() -> Optional[CalendarService]:
-    """Get calendar service if configured."""
-    if not all([settings.caldav_url, settings.caldav_username, settings.caldav_password]):
-        return None
-    return CalendarService(
-        caldav_url=settings.caldav_url,
-        username=settings.caldav_username,
-        password=settings.caldav_password,
-    )
+def is_calendar_configured() -> bool:
+    """Check if calendar service is configured."""
+    return all([settings.caldav_url, settings.caldav_username, settings.caldav_password])
 
 
 @router.get("/events")
@@ -73,19 +67,33 @@ async def list_events(
 @router.post("/events", response_model=CalendarEventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: CalendarEventCreate,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Create a new calendar event."""
-    service = get_calendar_service()
-    if not service:
+    if not is_calendar_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Calendar service not configured",
         )
 
     try:
-        event = service.create_event(event_data)
-        return event
+        service = CalendarService(db, current_user.id)
+        result = await service.create_event(
+            title=event_data.title,
+            start=event_data.start,
+            end=event_data.end,
+            location=event_data.location,
+            description=event_data.description,
+        )
+        if result.get("error"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["error"],
+            )
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -97,20 +105,28 @@ async def create_event(
 async def update_event(
     event_id: str,
     event_data: CalendarEventUpdate,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Update a calendar event."""
-    service = get_calendar_service()
-    if not service:
+    if not is_calendar_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Calendar service not configured",
         )
 
     try:
+        service = CalendarService(db, current_user.id)
         updates = event_data.model_dump(exclude_unset=True)
-        event = service.update_event(event_id, updates)
-        return event
+        result = await service.update_event(event_id, updates)
+        if result.get("error"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["error"],
+            )
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -121,18 +137,26 @@ async def update_event(
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_event(
     event_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a calendar event."""
-    service = get_calendar_service()
-    if not service:
+    if not is_calendar_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Calendar service not configured",
         )
 
     try:
-        service.delete_event(event_id)
+        service = CalendarService(db, current_user.id)
+        result = await service.delete_event(event_id)
+        if result.get("error"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["error"],
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -147,8 +171,7 @@ async def optimize_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Get schedule optimization suggestions."""
-    service = get_calendar_service()
-    if not service:
+    if not is_calendar_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Calendar service not configured",
@@ -158,6 +181,7 @@ async def optimize_schedule(
     from app.services.optimizer import ScheduleOptimizer
 
     try:
+        service = CalendarService(db, current_user.id)
         optimizer = ScheduleOptimizer(service, db, current_user.id)
         proposal = await optimizer.propose_optimization(
             start=request.date_range_start,
@@ -176,29 +200,30 @@ async def optimize_schedule(
 @router.post("/optimize/apply", status_code=status.HTTP_200_OK)
 async def apply_optimization(
     request: ApplyOptimizationRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Apply approved schedule changes."""
-    service = get_calendar_service()
-    if not service:
+    if not is_calendar_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Calendar service not configured",
         )
 
+    service = CalendarService(db, current_user.id)
     applied = []
     errors = []
 
     for change in request.approved_changes:
         try:
             if change.change_type == "move":
-                service.update_event(
+                await service.update_event(
                     change.event_id,
                     {"start": change.new_start, "end": change.new_end},
                 )
                 applied.append(change.event_id)
             elif change.change_type == "remove":
-                service.delete_event(change.event_id)
+                await service.delete_event(change.event_id)
                 applied.append(change.event_id)
         except Exception as e:
             errors.append({"event_id": change.event_id, "error": str(e)})
