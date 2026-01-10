@@ -404,7 +404,7 @@ class ModelRouter:
                         return True
         return False
 
-    def should_use_chain(self, message: str, task_type: str) -> Optional[str]:
+    def should_use_chain(self, message: str, task_type: Optional[str] = None) -> Optional[str]:
         """Determine if request should use a multi-model chain."""
         cfg = self.config.get_config()
 
@@ -418,7 +418,7 @@ class ModelRouter:
             "complex_query": "classify_execute_synthesize_chain",
         }
 
-        if task_type in chain_tasks:
+        if task_type and task_type in chain_tasks:
             chain_name = chain_tasks[task_type]
             if chain_name in cfg.get("chain_configs", {}) or chain_name in DEFAULT_CHAINS:
                 return chain_name
