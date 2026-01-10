@@ -54,6 +54,7 @@ services:
       - APNS_CERT_PATH=${APNS_CERT_PATH}
       - APNS_BUNDLE_ID=${APNS_BUNDLE_ID}
       - WHISPER_MODEL_SIZE=large-v3
+      - API_KEY=${API_KEY}
     deploy:
       resources:
         reservations:
