@@ -14,7 +14,7 @@ from app.models.project import Project
 from app.models.meeting import Meeting
 from app.models.follow_up import FollowUp
 from app.models.read_later import ReadLater
-from app.models.preferences import UserPreference
+from app.models.preferences import Preference
 from app.models.activity import ActivityLog
 
 
@@ -414,7 +414,7 @@ class ToolExecutor:
         stmt = select(FollowUp).where(
             and_(
                 FollowUp.user_id == self.user_id,
-                FollowUp.status == "pending",
+                FollowUp.status == "waiting",
             )
         )
 
@@ -561,12 +561,12 @@ Thanks!"""
         """Get user preferences for a category."""
         category = input["category"]
 
-        stmt = select(UserPreference).where(
-            UserPreference.user_id == self.user_id
+        stmt = select(Preference).where(
+            Preference.user_id == self.user_id
         )
 
         if category != "all":
-            stmt = stmt.where(UserPreference.category == category)
+            stmt = stmt.where(Preference.category == category)
 
         result = await self.db.execute(stmt)
         prefs = result.scalars().all()
@@ -580,11 +580,11 @@ Thanks!"""
     async def _execute_update_user_preference(self, input: Dict) -> Any:
         """Update or learn a preference."""
         result = await self.db.execute(
-            select(UserPreference).where(
+            select(Preference).where(
                 and_(
-                    UserPreference.user_id == self.user_id,
-                    UserPreference.category == input["category"],
-                    UserPreference.key == input["key"],
+                    Preference.user_id == self.user_id,
+                    Preference.category == input["category"],
+                    Preference.key == input["key"],
                 )
             )
         )
@@ -594,7 +594,7 @@ Thanks!"""
             pref.value = input["value"]
             pref.learned = input.get("learned", False)
         else:
-            pref = UserPreference(
+            pref = Preference(
                 user_id=self.user_id,
                 category=input["category"],
                 key=input["key"],
