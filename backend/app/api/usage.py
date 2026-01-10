@@ -30,6 +30,34 @@ async def get_usage_summary(
     return summary
 
 
+@router.get("/models")
+async def get_model_usage(
+    period: str = Query("week", enum=["day", "week", "month"]),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get usage breakdown by model tier."""
+    tracker = CostTracker(db, str(current_user.id))
+    summary = await tracker.get_usage_summary(period)
+    return {
+        "period": period,
+        "models": summary.get("by_model", {}),
+        "totals": summary.get("totals", {}),
+    }
+
+
+@router.get("/daily")
+async def get_daily_usage(
+    days: int = Query(30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get daily usage data for charts."""
+    tracker = CostTracker(db, str(current_user.id))
+    daily_costs = await tracker.get_daily_costs(days)
+    return {"days": daily_costs}
+
+
 @router.get("/history")
 async def get_usage_history(
     limit: int = 100,

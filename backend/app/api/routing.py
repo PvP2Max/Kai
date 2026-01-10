@@ -42,6 +42,16 @@ async def get_routing_settings(
     return config.get_config()
 
 
+@router.get("/config", response_model=RoutingSettingsResponse)
+async def get_routing_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get current routing configuration (alias for /settings)."""
+    config = RoutingConfig(db, str(current_user.id))
+    return config.get_config()
+
+
 @router.put("/settings", response_model=RoutingSettingsResponse)
 async def update_routing_settings(
     settings_data: RoutingSettingsUpdate,

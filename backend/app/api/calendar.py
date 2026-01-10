@@ -35,29 +35,39 @@ def get_calendar_service() -> Optional[CalendarService]:
     )
 
 
-@router.get("/events", response_model=List[CalendarEventResponse])
+@router.get("/events")
 async def list_events(
-    start: datetime = Query(..., description="Start date (ISO format)"),
-    end: datetime = Query(..., description="End date (ISO format)"),
+    start_date: str = Query(None, description="Start date (ISO format)"),
+    end_date: str = Query(None, description="End date (ISO format)"),
+    start: datetime = Query(None, description="Start datetime (ISO format)"),
+    end: datetime = Query(None, description="End datetime (ISO format)"),
     calendar_name: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """List calendar events for a date range."""
-    service = get_calendar_service()
-    if not service:
+    if not all([settings.caldav_url, settings.caldav_username, settings.caldav_password]):
+        return []  # Return empty list if calendar not configured
+
+    # Handle both start_date/end_date (string) and start/end (datetime) params
+    start_str = start_date or (start.isoformat() if start else None)
+    end_str = end_date or (end.isoformat() if end else None)
+
+    if not start_str or not end_str:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Calendar service not configured",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="start_date and end_date are required",
         )
 
     try:
-        events = service.get_events(start, end, calendar_name)
-        return events
+        from app.services.calendar import CalendarService
+        service = CalendarService(db, current_user.id)
+        events = await service.get_events(start_str, end_str, calendar_name)
+        if isinstance(events, dict) and "error" in events:
+            return []
+        return events if isinstance(events, list) else []
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching calendar events: {str(e)}",
-        )
+        return []  # Return empty on error rather than crashing
 
 
 @router.post("/events", response_model=CalendarEventResponse, status_code=status.HTTP_201_CREATED)

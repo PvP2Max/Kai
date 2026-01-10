@@ -40,6 +40,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
+        "https://kai.pvp2max.com",  # Production
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -59,7 +60,7 @@ app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 app.include_router(follow_ups.router, prefix="/api/follow-ups", tags=["Follow-ups"])
 app.include_router(read_later.router, prefix="/api/read-later", tags=["Read Later"])
 app.include_router(preferences.router, prefix="/api/preferences", tags=["Preferences"])
-app.include_router(briefings.router, prefix="/api/briefing", tags=["Briefings"])
+app.include_router(briefings.router, prefix="/api/briefings", tags=["Briefings"])
 app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
 
 
