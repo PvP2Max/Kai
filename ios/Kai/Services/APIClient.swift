@@ -206,9 +206,9 @@ final class APIClient {
             case .chat:
                 return "/api/chat"
             case .conversations:
-                return "/api/chat/conversations"
+                return "/api/conversations"
             case .conversation(let id):
-                return "/api/chat/conversations/\(id)"
+                return "/api/conversations/\(id)"
             case .calendarEvents:
                 return "/api/calendar/events"
             case .calendarEvent(let id):
