@@ -6,7 +6,7 @@ struct EmailAccount: Codable, Identifiable {
     let id: String
     let provider: String
     let emailAddress: String
-    let displayName: String
+    var displayName: String
     var includeInBriefing: Bool
     var briefingDays: [String]?
     var priority: Int
@@ -52,121 +52,6 @@ struct EmailBriefingConfig: Codable {
     }
 }
 
-// MARK: - View Model
-
-@MainActor
-class EmailAccountsViewModel: ObservableObject {
-    @Published var accounts: [EmailAccount] = []
-    @Published var briefingConfig: EmailBriefingConfig?
-    @Published var isLoading = false
-    @Published var error: String?
-    @Published var showAddAccount = false
-
-    func loadAccounts() async {
-        isLoading = true
-        error = nil
-
-        do {
-            let response = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts"),
-                method: "GET",
-                responseType: EmailAccountListResponse.self
-            )
-            accounts = response.accounts
-        } catch {
-            self.error = error.localizedDescription
-        }
-
-        // Load briefing config
-        do {
-            briefingConfig = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts/briefing/config"),
-                method: "GET",
-                responseType: EmailBriefingConfig.self
-            )
-        } catch {
-            // Config may not exist yet
-        }
-
-        isLoading = false
-    }
-
-    func updateAccount(_ account: EmailAccount) async {
-        do {
-            let body: [String: Any] = [
-                "display_name": account.displayName,
-                "include_in_briefing": account.includeInBriefing,
-                "briefing_days": account.briefingDays ?? ["all"],
-                "priority": account.priority,
-                "max_emails_in_briefing": account.maxEmailsInBriefing,
-                "is_active": account.isActive
-            ]
-
-            _ = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts/\(account.id)"),
-                method: "PUT",
-                body: body,
-                responseType: EmailAccount.self
-            )
-
-            await loadAccounts()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func deleteAccount(_ account: EmailAccount) async {
-        do {
-            _ = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts/\(account.id)"),
-                method: "DELETE",
-                responseType: EmptyResponse.self
-            )
-
-            accounts.removeAll { $0.id == account.id }
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func updateBriefingConfig() async {
-        guard let config = briefingConfig else { return }
-
-        do {
-            let body: [String: Any?] = [
-                "briefing_enabled": config.briefingEnabled,
-                "morning_briefing_time": config.morningBriefingTime,
-                "weekday_accounts": config.weekdayAccounts,
-                "weekend_accounts": config.weekendAccounts,
-                "skip_days": config.skipDays
-            ]
-
-            _ = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts/briefing/config"),
-                method: "PUT",
-                body: body.compactMapValues { $0 },
-                responseType: EmailBriefingConfig.self
-            )
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func startOAuth(provider: String) async -> URL? {
-        do {
-            let response = try await APIClient.shared.request(
-                endpoint: .custom("email-accounts/oauth/\(provider)/start"),
-                method: "GET",
-                responseType: OAuthStartResponse.self
-            )
-            return URL(string: response.authUrl)
-        } catch {
-            self.error = error.localizedDescription
-            return nil
-        }
-    }
-}
-
 struct EmailAccountListResponse: Codable {
     let accounts: [EmailAccount]
     let count: Int
@@ -182,7 +67,151 @@ struct OAuthStartResponse: Codable {
     }
 }
 
-struct EmptyResponse: Codable {}
+struct EmailAccountUpdateRequest: Codable {
+    let displayName: String
+    let includeInBriefing: Bool
+    let briefingDays: [String]
+    let priority: Int
+    let maxEmailsInBriefing: Int
+    let isActive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case includeInBriefing = "include_in_briefing"
+        case briefingDays = "briefing_days"
+        case priority
+        case maxEmailsInBriefing = "max_emails_in_briefing"
+        case isActive = "is_active"
+    }
+}
+
+struct EmailBriefingConfigUpdateRequest: Codable {
+    let briefingEnabled: Bool
+    let morningBriefingTime: String?
+    let weekdayAccounts: [String]?
+    let weekendAccounts: [String]?
+    let skipDays: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case briefingEnabled = "briefing_enabled"
+        case morningBriefingTime = "morning_briefing_time"
+        case weekdayAccounts = "weekday_accounts"
+        case weekendAccounts = "weekend_accounts"
+        case skipDays = "skip_days"
+    }
+}
+
+struct EmptyBody: Codable {}
+
+// MARK: - View Model
+
+@MainActor
+class EmailAccountsViewModel: ObservableObject {
+    @Published var accounts: [EmailAccount] = []
+    @Published var briefingConfig: EmailBriefingConfig?
+    @Published var isLoading = false
+    @Published var error: String?
+    @Published var showAddAccount = false
+
+    func loadAccounts() async {
+        isLoading = true
+        error = nil
+
+        do {
+            let response: EmailAccountListResponse = try await APIClient.shared.request(
+                .custom("/email-accounts"),
+                method: .get
+            )
+            accounts = response.accounts
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        // Load briefing config
+        do {
+            let config: EmailBriefingConfig = try await APIClient.shared.request(
+                .custom("/email-accounts/briefing/config"),
+                method: .get
+            )
+            briefingConfig = config
+        } catch {
+            // Config may not exist yet
+        }
+
+        isLoading = false
+    }
+
+    func updateAccount(_ account: EmailAccount) async {
+        do {
+            let body = EmailAccountUpdateRequest(
+                displayName: account.displayName,
+                includeInBriefing: account.includeInBriefing,
+                briefingDays: account.briefingDays ?? ["all"],
+                priority: account.priority,
+                maxEmailsInBriefing: account.maxEmailsInBriefing,
+                isActive: account.isActive
+            )
+
+            let _: EmailAccount = try await APIClient.shared.request(
+                .custom("/email-accounts/\(account.id)"),
+                method: .put,
+                body: body
+            )
+
+            await loadAccounts()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteAccount(_ account: EmailAccount) async {
+        do {
+            let _: EmptyBody = try await APIClient.shared.request(
+                .custom("/email-accounts/\(account.id)"),
+                method: .delete
+            )
+
+            accounts.removeAll { $0.id == account.id }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func updateBriefingConfig() async {
+        guard let config = briefingConfig else { return }
+
+        do {
+            let body = EmailBriefingConfigUpdateRequest(
+                briefingEnabled: config.briefingEnabled,
+                morningBriefingTime: config.morningBriefingTime,
+                weekdayAccounts: config.weekdayAccounts,
+                weekendAccounts: config.weekendAccounts,
+                skipDays: config.skipDays
+            )
+
+            let _: EmailBriefingConfig = try await APIClient.shared.request(
+                .custom("/email-accounts/briefing/config"),
+                method: .put,
+                body: body
+            )
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func startOAuth(provider: String) async -> URL? {
+        do {
+            let response: OAuthStartResponse = try await APIClient.shared.request(
+                .custom("/email-accounts/oauth/\(provider)/start"),
+                method: .get
+            )
+            return URL(string: response.authUrl)
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+}
 
 // MARK: - Main View
 
@@ -464,7 +493,6 @@ struct EmailAccountDetailView: View {
 struct AddEmailAccountView: View {
     @ObservedObject var viewModel: EmailAccountsViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedProvider = "gmail"
 
     var body: some View {
         NavigationStack {
