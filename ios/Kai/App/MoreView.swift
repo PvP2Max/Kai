@@ -198,7 +198,7 @@ struct RemindersSettingsView: View {
                     Text("Status")
                     Spacer()
                     switch remindersManager.authorizationStatus {
-                    case .authorized, .fullAccess:
+                    case .fullAccess, .writeOnly:
                         Label("Connected", systemImage: "checkmark.circle.fill")
                             .foregroundColor(.green)
                     case .denied, .restricted:
@@ -219,8 +219,7 @@ struct RemindersSettingsView: View {
                 }
             }
 
-            if remindersManager.authorizationStatus == .fullAccess ||
-               remindersManager.authorizationStatus == .authorized {
+            if remindersManager.authorizationStatus == .fullAccess {
                 Section("Sync Settings") {
                     Toggle("Auto-Sync to Kai", isOn: $autoSync)
 
@@ -234,7 +233,7 @@ struct RemindersSettingsView: View {
 
                     Button("Sync Now") {
                         Task {
-                            await remindersManager.syncToBackend()
+                            try? await remindersManager.syncToBackend()
                         }
                     }
                 }
