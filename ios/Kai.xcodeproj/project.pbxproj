@@ -8,6 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		0CB654A02F138990000D3BD8 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB6549F2F138990000D3BD8 /* LocationManager.swift */; };
+		A1000015001 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015001 /* SpeechService.swift */; };
+		A1000015002 /* RemindersManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015002 /* RemindersManager.swift */; };
+		A1000015003 /* ProjectsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015003 /* ProjectsViewModel.swift */; };
+		A1000015004 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015004 /* Project.swift */; };
+		A1000015005 /* ProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015005 /* ProjectsView.swift */; };
+		A1000015006 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015006 /* ProjectDetailView.swift */; };
+		A1000015007 /* EmailAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015007 /* EmailAccountsView.swift */; };
 		A1000001001 /* KaiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001001 /* KaiApp.swift */; };
 		A1000001002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001002 /* AppDelegate.swift */; };
 		A1000001003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001003 /* MainTabView.swift */; };
@@ -90,6 +97,13 @@
 
 /* Begin PBXFileReference section */
 		0CB6549F2F138990000D3BD8 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		A2000015001 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		A2000015002 /* RemindersManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersManager.swift; sourceTree = "<group>"; };
+		A2000015003 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
+		A2000015004 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
+		A2000015005 /* ProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsView.swift; sourceTree = "<group>"; };
+		A2000015006 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
+		A2000015007 /* EmailAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAccountsView.swift; sourceTree = "<group>"; };
 		A2000001001 /* KaiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaiApp.swift; sourceTree = "<group>"; };
 		A2000001002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A2000001003 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -244,6 +258,7 @@
 				A2000003005 /* Meeting.swift */,
 				A2000003006 /* CalendarEvent.swift */,
 				A2000003007 /* Note.swift */,
+				A2000015004 /* Project.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -267,6 +282,8 @@
 				A2000005005 /* AudioRecordingService.swift */,
 				A2000005006 /* PushNotificationService.swift */,
 				A2000005007 /* NetworkMonitor.swift */,
+				A2000015001 /* SpeechService.swift */,
+				A2000015002 /* RemindersManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -279,6 +296,7 @@
 				A2000006003 /* MeetingsViewModel.swift */,
 				A2000006004 /* NotesViewModel.swift */,
 				A2000006005 /* SettingsViewModel.swift */,
+				A2000015003 /* ProjectsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -294,8 +312,18 @@
 				C5000007007 /* Briefings */,
 				C5000007008 /* Settings */,
 				C5000007009 /* Components */,
+				C5000007010 /* Projects */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		C5000007010 /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				A2000015005 /* ProjectsView.swift */,
+				A2000015006 /* ProjectDetailView.swift */,
+			);
+			path = Projects;
 			sourceTree = "<group>";
 		};
 		C5000007002 /* Auth */ = {
@@ -356,6 +384,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000013001 /* SettingsView.swift */,
+				A2000015007 /* EmailAccountsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -536,6 +565,13 @@
 				A1000012001 /* BriefingsView.swift in Sources */,
 				A1000013001 /* SettingsView.swift in Sources */,
 				A1000014001 /* LoadingView.swift in Sources */,
+				A1000015001 /* SpeechService.swift in Sources */,
+				A1000015002 /* RemindersManager.swift in Sources */,
+				A1000015003 /* ProjectsViewModel.swift in Sources */,
+				A1000015004 /* Project.swift in Sources */,
+				A1000015005 /* ProjectsView.swift in Sources */,
+				A1000015006 /* ProjectDetailView.swift in Sources */,
+				A1000015007 /* EmailAccountsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
