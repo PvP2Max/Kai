@@ -207,6 +207,14 @@ final class APIClient {
         case briefingsDaily
         case briefingsWeekly
 
+        // Activity Log
+        case activity
+        case activityUndo(id: String)
+
+        // Usage & Routing
+        case usageSummary
+        case routingConfig
+
         // Custom path
         case custom(String)
 
@@ -264,6 +272,14 @@ final class APIClient {
                 return "/api/briefings/daily"
             case .briefingsWeekly:
                 return "/api/briefings/weekly"
+            case .activity:
+                return "/api/activity"
+            case .activityUndo(let id):
+                return "/api/activity/\(id)/undo"
+            case .usageSummary:
+                return "/api/usage/summary"
+            case .routingConfig:
+                return "/api/routing/config"
             case .custom(let path):
                 return "/api\(path)"
             }

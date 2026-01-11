@@ -145,18 +145,153 @@ struct MoreRowView: View {
     }
 }
 
-// MARK: - Placeholder Views
+// MARK: - Activity Log View
 
 struct ActivityLogView: View {
+    @StateObject private var viewModel = ActivityLogViewModel()
+    @State private var showUndoError = false
+
     var body: some View {
-        List {
-            Text("Activity log will appear here")
-                .foregroundColor(.secondary)
+        Group {
+            if viewModel.isLoading && viewModel.activities.isEmpty {
+                ProgressView("Loading activity...")
+            } else if let error = viewModel.error, viewModel.activities.isEmpty {
+                ContentUnavailableView {
+                    Label("Unable to Load", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Retry") {
+                        Task { await viewModel.loadActivities() }
+                    }
+                }
+            } else if viewModel.activities.isEmpty {
+                ContentUnavailableView(
+                    "No Activity Yet",
+                    systemImage: "clock.arrow.circlepath",
+                    description: Text("Your actions in Kai will appear here.")
+                )
+            } else {
+                activityList
+            }
         }
         .navigationTitle("Activity Log")
         .navigationBarTitleDisplayMode(.large)
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .task {
+            await viewModel.loadActivities()
+        }
+        .alert("Undo Failed", isPresented: $showUndoError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.undoError ?? "An error occurred while undoing the action.")
+        }
+    }
+
+    private var activityList: some View {
+        List {
+            ForEach(viewModel.activities) { activity in
+                ActivityRow(
+                    activity: activity,
+                    isUndoing: viewModel.isUndoing,
+                    onUndo: {
+                        Task {
+                            let success = await viewModel.undo(activity: activity)
+                            if !success {
+                                showUndoError = true
+                            }
+                        }
+                    }
+                )
+            }
+
+            // Load more indicator
+            if viewModel.isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            }
+        }
     }
 }
+
+// MARK: - Activity Row
+
+struct ActivityRow: View {
+    let activity: ActivityLogItem
+    let isUndoing: Bool
+    let onUndo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon
+            Image(systemName: activity.actionIcon)
+                .font(.system(size: 20))
+                .foregroundColor(iconColor)
+                .frame(width: 32, height: 32)
+
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.actionDescription)
+                    .font(.subheadline)
+                    .strikethrough(activity.reversed)
+                    .foregroundColor(activity.reversed ? .secondary : .primary)
+
+                HStack(spacing: 8) {
+                    Text(activity.relativeTime)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    if let source = activity.source {
+                        Text("via \(source)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if activity.reversed {
+                        Text("(Undone)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Undo button
+            if activity.reversible && !activity.reversed {
+                Button {
+                    onUndo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                .disabled(isUndoing)
+                .buttonStyle(.borderless)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var iconColor: Color {
+        switch activity.actionColor {
+        case "orange": return .orange
+        case "blue": return .blue
+        case "green": return .green
+        case "purple": return .purple
+        case "indigo": return .indigo
+        case "red": return .red
+        default: return .gray
+        }
+    }
+}
+
+// MARK: - Placeholder Views
 
 struct HelpView: View {
     var body: some View {
@@ -210,16 +345,26 @@ struct RemindersSettingsView: View {
                     }
                 }
 
-                if remindersManager.authorizationStatus != .fullAccess {
+                // Show Connect button only when not determined
+                if remindersManager.authorizationStatus == .notDetermined {
                     Button("Connect Apple Reminders") {
                         Task {
                             await remindersManager.requestAccess()
                         }
                     }
                 }
+
+                // Show Open Settings button when denied
+                if remindersManager.authorizationStatus == .denied || remindersManager.authorizationStatus == .restricted {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
             }
 
-            if remindersManager.authorizationStatus == .fullAccess {
+            if remindersManager.authorizationStatus == .fullAccess || remindersManager.authorizationStatus == .writeOnly {
                 Section("Sync Settings") {
                     Toggle("Auto-Sync to Kai", isOn: $autoSync)
 
@@ -257,8 +402,8 @@ struct RemindersSettingsView: View {
         }
         .navigationTitle("Reminders")
         .navigationBarTitleDisplayMode(.large)
-        .task {
-            await remindersManager.requestAccess()
+        .onAppear {
+            remindersManager.checkAuthorizationStatus()
         }
     }
 }

@@ -15,6 +15,9 @@
 		A1000015005 /* ProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015005 /* ProjectsView.swift */; };
 		A1000015006 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015006 /* ProjectDetailView.swift */; };
 		A1000015007 /* EmailAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015007 /* EmailAccountsView.swift */; };
+		A1000015008 /* ActivityLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015008 /* ActivityLog.swift */; };
+		A1000015009 /* DataUsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015009 /* DataUsageView.swift */; };
+		A1000015010 /* ActivityLogViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015010 /* ActivityLogViewModel.swift */; };
 		A1000001001 /* KaiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001001 /* KaiApp.swift */; };
 		A1000001002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001002 /* AppDelegate.swift */; };
 		A1000001003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001003 /* MainTabView.swift */; };
@@ -104,6 +107,9 @@
 		A2000015005 /* ProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsView.swift; sourceTree = "<group>"; };
 		A2000015006 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
 		A2000015007 /* EmailAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAccountsView.swift; sourceTree = "<group>"; };
+		A2000015008 /* ActivityLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLog.swift; sourceTree = "<group>"; };
+		A2000015009 /* DataUsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataUsageView.swift; sourceTree = "<group>"; };
+		A2000015010 /* ActivityLogViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogViewModel.swift; sourceTree = "<group>"; };
 		A2000001001 /* KaiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaiApp.swift; sourceTree = "<group>"; };
 		A2000001002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A2000001003 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -259,6 +265,7 @@
 				A2000003006 /* CalendarEvent.swift */,
 				A2000003007 /* Note.swift */,
 				A2000015004 /* Project.swift */,
+				A2000015008 /* ActivityLog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -297,6 +304,7 @@
 				A2000006004 /* NotesViewModel.swift */,
 				A2000006005 /* SettingsViewModel.swift */,
 				A2000015003 /* ProjectsViewModel.swift */,
+				A2000015010 /* ActivityLogViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -385,6 +393,7 @@
 			children = (
 				A2000013001 /* SettingsView.swift */,
 				A2000015007 /* EmailAccountsView.swift */,
+				A2000015009 /* DataUsageView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -572,6 +581,9 @@
 				A1000015005 /* ProjectsView.swift in Sources */,
 				A1000015006 /* ProjectDetailView.swift in Sources */,
 				A1000015007 /* EmailAccountsView.swift in Sources */,
+				A1000015008 /* ActivityLog.swift in Sources */,
+				A1000015009 /* DataUsageView.swift in Sources */,
+				A1000015010 /* ActivityLogViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
