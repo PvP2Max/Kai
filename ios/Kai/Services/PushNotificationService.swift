@@ -99,7 +99,7 @@ final class PushNotificationService: NSObject, ObservableObject {
                 setupNotificationCategories()
             }
 
-            await checkAuthorizationStatus()
+            checkAuthorizationStatus()
 
             #if DEBUG
             print("[PushNotificationService] Permission granted: \(granted)")

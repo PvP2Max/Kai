@@ -206,28 +206,41 @@ final class AudioRecordingService: NSObject, ObservableObject {
     // MARK: - Private Methods
 
     private func requestMicrophonePermission() async throws -> Bool {
-        let status = AVAudioSession.sharedInstance().recordPermission
-
-        switch status {
-        case .granted:
-            return true
-        case .denied:
-            throw RecordingError.microphonePermissionDenied
-        case .undetermined:
-            return await withCheckedContinuation { continuation in
-                AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                    continuation.resume(returning: granted)
-                }
+        if #available(iOS 17.0, *) {
+            let status = AVAudioApplication.shared.recordPermission
+            switch status {
+            case .granted:
+                return true
+            case .denied:
+                throw RecordingError.microphonePermissionDenied
+            case .undetermined:
+                return await AVAudioApplication.requestRecordPermission()
+            @unknown default:
+                throw RecordingError.microphonePermissionRestricted
             }
-        @unknown default:
-            throw RecordingError.microphonePermissionRestricted
+        } else {
+            let status = AVAudioSession.sharedInstance().recordPermission
+            switch status {
+            case .granted:
+                return true
+            case .denied:
+                throw RecordingError.microphonePermissionDenied
+            case .undetermined:
+                return await withCheckedContinuation { continuation in
+                    AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                        continuation.resume(returning: granted)
+                    }
+                }
+            @unknown default:
+                throw RecordingError.microphonePermissionRestricted
+            }
         }
     }
 
     private func configureAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try session.setActive(true)
         } catch {
             throw RecordingError.audioSessionSetupFailed(error)

@@ -107,7 +107,11 @@ class CalendarViewModel: ObservableObject {
     }
 
     var isAuthorized: Bool {
-        authorizationStatus == .fullAccess || authorizationStatus == .authorized
+        if #available(iOS 17.0, *) {
+            return authorizationStatus == .fullAccess || authorizationStatus == .writeOnly
+        } else {
+            return authorizationStatus == .fullAccess
+        }
     }
 
     // MARK: - Authorization Methods
@@ -162,7 +166,7 @@ class CalendarViewModel: ObservableObject {
         let ekEvents = loadFromEventKit(startDate: startDate, endDate: endDate)
 
         // Convert to CalendarEvent model
-        var localEvents = ekEvents.map { ekEvent in
+        let localEvents = ekEvents.map { ekEvent in
             CalendarEvent(
                 id: ekEvent.eventIdentifier,
                 title: ekEvent.title ?? "Untitled Event",
