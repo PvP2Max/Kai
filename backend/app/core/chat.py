@@ -140,6 +140,43 @@ class ChatHandler:
         self.db.add(activity)
         await self.db.commit()
 
+    async def _generate_conversation_title(
+        self,
+        conversation: Conversation,
+        user_message: str,
+        assistant_response: str,
+    ):
+        """Generate a concise title for a conversation using Haiku."""
+        try:
+            response = await self.client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=50,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""Generate a very short title (3-6 words) for this conversation.
+Just respond with the title, nothing else. No quotes or punctuation.
+
+User: {user_message[:200]}
+Assistant: {assistant_response[:200]}"""
+                    }
+                ],
+            )
+
+            title = response.content[0].text.strip()
+            # Clean up the title - remove quotes if present
+            title = title.strip('"\'')
+            # Limit length
+            if len(title) > 100:
+                title = title[:97] + "..."
+
+            conversation.title = title
+            await self.db.commit()
+
+        except Exception as e:
+            # Don't fail the conversation if title generation fails
+            print(f"Failed to generate conversation title: {e}")
+
     async def _build_system_prompt(self) -> str:
         """Build the system prompt for Kai using the user's timezone."""
         user_tz = await self._get_user_timezone()
@@ -218,6 +255,12 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
                 model=selected_model,
                 messages=history,
                 conversation_id=conversation.id,
+            )
+
+        # Generate title for new conversations (first message)
+        if not conversation.title and len(history) <= 2:
+            await self._generate_conversation_title(
+                conversation, message, response["content"]
             )
 
         return {
