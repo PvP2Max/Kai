@@ -203,6 +203,10 @@ final class APIClient {
         case remindersByProject
         case remindersSync
 
+        // Briefings
+        case briefingsDaily
+        case briefingsWeekly
+
         // Custom path
         case custom(String)
 
@@ -256,6 +260,10 @@ final class APIClient {
                 return "/api/reminders/by-project"
             case .remindersSync:
                 return "/api/reminders/sync"
+            case .briefingsDaily:
+                return "/api/briefings/daily"
+            case .briefingsWeekly:
+                return "/api/briefings/weekly"
             case .custom(let path):
                 return "/api\(path)"
             }

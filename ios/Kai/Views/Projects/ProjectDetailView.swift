@@ -48,7 +48,7 @@ struct ProjectDetailView: View {
                     if viewModel.selectedProject?.status == "active" {
                         Button {
                             Task {
-                                await viewModel.completeProject(id: projectId)
+                                _ = await viewModel.completeProject(id: projectId)
                                 await viewModel.loadProjectDetail(id: projectId)
                             }
                         } label: {
@@ -57,7 +57,7 @@ struct ProjectDetailView: View {
 
                         Button {
                             Task {
-                                await viewModel.archiveProject(id: projectId)
+                                _ = await viewModel.archiveProject(id: projectId)
                                 await viewModel.loadProjectDetail(id: projectId)
                             }
                         } label: {
@@ -66,7 +66,7 @@ struct ProjectDetailView: View {
                     } else {
                         Button {
                             Task {
-                                await viewModel.reactivateProject(id: projectId)
+                                _ = await viewModel.reactivateProject(id: projectId)
                                 await viewModel.loadProjectDetail(id: projectId)
                             }
                         } label: {

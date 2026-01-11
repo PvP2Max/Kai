@@ -316,6 +316,9 @@ class BriefingsViewModel: ObservableObject {
     @Published var briefings: [Briefing] = []
     @Published var isLoading = false
     @Published var isGenerating = false
+    @Published var error: String?
+
+    private var cachedBriefings: [String: Briefing] = [:]
 
     var groupedBriefings: [String: [Briefing]] {
         Dictionary(grouping: briefings) { briefing in
@@ -325,12 +328,11 @@ class BriefingsViewModel: ObservableObject {
 
     func loadBriefings() async {
         isLoading = true
+        error = nil
         defer { isLoading = false }
 
-        // TODO: Replace with actual API call when backend supports briefings
-        // For now, use sample data
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        briefings = Briefing.samples
+        // Load today's briefing from API
+        await generateBriefing()
     }
 
     func refresh() async {
@@ -339,27 +341,147 @@ class BriefingsViewModel: ObservableObject {
 
     func generateBriefing() async {
         isGenerating = true
+        error = nil
         defer { isGenerating = false }
 
-        // TODO: Replace with actual API call when backend supports briefings
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        let newBriefing = Briefing(
-            id: UUID().uuidString,
-            title: "Your Daily Briefing",
-            summary: "Here's what you need to know for today.",
-            events: ["Team standup at 9:00 AM", "Product review at 2:00 PM"],
-            tasks: ["Review PR #123", "Update documentation"],
-            reminders: ["Call dentist"],
-            weather: "Partly cloudy, 72°F",
-            insights: "You have a busy afternoon - consider blocking focus time this morning.",
-            createdAt: Date()
-        )
-        briefings.insert(newBriefing, at: 0)
+        do {
+            let response: BriefingAPIResponse = try await APIClient.shared.request(
+                .briefingsDaily,
+                method: .get
+            )
+
+            let briefing = Briefing(from: response)
+
+            // Update or add briefing
+            if let existingIndex = briefings.firstIndex(where: { $0.dateKey == briefing.dateKey }) {
+                briefings[existingIndex] = briefing
+            } else {
+                briefings.insert(briefing, at: 0)
+            }
+        } catch {
+            self.error = error.localizedDescription
+            #if DEBUG
+            print("[BriefingsViewModel] Failed to generate briefing: \(error)")
+            #endif
+        }
     }
 
     func deleteBriefing(_ briefing: Briefing) async {
         briefings.removeAll { $0.id == briefing.id }
-        // TODO: Add API call when backend supports briefings
+    }
+}
+
+// MARK: - API Response Models
+
+struct BriefingAPIResponse: Codable {
+    let date: String
+    let briefing: BriefingData
+    let generatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case date
+        case briefing
+        case generatedAt = "generated_at"
+    }
+}
+
+struct BriefingData: Codable {
+    let summary: String
+    let events: [BriefingEvent]?
+    let reminders: [BriefingReminder]?
+    let followUps: [BriefingFollowUp]?
+    let weather: BriefingWeather?
+    let emails: BriefingEmails?
+
+    enum CodingKeys: String, CodingKey {
+        case summary
+        case events
+        case reminders
+        case followUps = "follow_ups"
+        case weather
+        case emails
+    }
+}
+
+struct BriefingEvent: Codable {
+    let id: String?
+    let summary: String?
+    let title: String?
+    let start: String?
+    let end: String?
+    let location: String?
+
+    var displayTitle: String {
+        title ?? summary ?? "Untitled Event"
+    }
+}
+
+struct BriefingReminder: Codable {
+    let id: String?
+    let title: String
+    let dueDate: String?
+    let priority: Int?
+    let projectName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case dueDate = "due_date"
+        case priority
+        case projectName = "project_name"
+    }
+}
+
+struct BriefingFollowUp: Codable {
+    let id: String?
+    let title: String
+    let dueDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case dueDate = "due_date"
+    }
+}
+
+struct BriefingWeather: Codable {
+    let description: String?
+    let temperature: Double?
+    let temperatureUnit: String?
+    let conditions: String?
+
+    enum CodingKeys: String, CodingKey {
+        case description
+        case temperature
+        case temperatureUnit = "temperature_unit"
+        case conditions
+    }
+
+    var displayString: String {
+        if let desc = description {
+            return desc
+        }
+        var parts: [String] = []
+        if let conditions = conditions {
+            parts.append(conditions)
+        }
+        if let temp = temperature {
+            let unit = temperatureUnit ?? "F"
+            parts.append("\(Int(temp))°\(unit)")
+        }
+        return parts.isEmpty ? "Weather data unavailable" : parts.joined(separator: ", ")
+    }
+}
+
+struct BriefingEmails: Codable {
+    let totalCount: Int?
+    let unreadCount: Int?
+    let highlights: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case totalCount = "total_count"
+        case unreadCount = "unread_count"
+        case highlights
     }
 }
 
@@ -375,6 +497,7 @@ struct Briefing: Identifiable {
     let weather: String?
     let insights: String?
     let createdAt: Date
+    let dateKey: String
 
     var eventCount: Int { events.count }
     var taskCount: Int { tasks.count }
@@ -409,30 +532,99 @@ struct Briefing: Identifiable {
         }
     }
 
-    static let samples: [Briefing] = [
-        Briefing(
-            id: "1",
-            title: "Morning Briefing",
-            summary: "You have 3 meetings today and 5 tasks to complete.",
-            events: ["Team standup at 9:00 AM", "Product review at 11:00 AM", "1:1 with Sarah at 2:00 PM"],
-            tasks: ["Review PR #123", "Update documentation", "Prepare demo", "Send weekly report", "Review budget"],
-            reminders: ["Call dentist at 4 PM", "Pick up dry cleaning"],
-            weather: "Sunny, 75°F",
-            insights: "Your afternoon is packed - consider preparing for meetings this morning.",
-            createdAt: Date()
-        ),
-        Briefing(
-            id: "2",
-            title: "Yesterday's Summary",
-            summary: "You completed 4 tasks and attended 2 meetings.",
-            events: ["Design review", "Sprint planning"],
-            tasks: ["Completed code review", "Fixed bug #456", "Updated tests", "Deployed to staging"],
-            reminders: [],
-            weather: nil,
-            insights: "Great productivity! You're ahead on your sprint goals.",
-            createdAt: Date().addingTimeInterval(-86400)
-        )
-    ]
+    // Initialize from API response
+    init(from response: BriefingAPIResponse) {
+        self.id = response.date
+        self.dateKey = response.date
+        self.title = "Daily Briefing"
+
+        // Parse the summary - the backend returns Claude's text
+        self.summary = response.briefing.summary
+
+        // Convert events to display strings
+        self.events = response.briefing.events?.map { event in
+            var eventStr = event.displayTitle
+            if let start = event.start {
+                // Parse time from ISO string
+                let timeStr = Briefing.formatEventTime(start)
+                if !timeStr.isEmpty {
+                    eventStr += " at \(timeStr)"
+                }
+            }
+            return eventStr
+        } ?? []
+
+        // Convert reminders to display strings
+        self.tasks = response.briefing.reminders?.map { reminder in
+            var taskStr = reminder.title
+            if let project = reminder.projectName {
+                taskStr += " (\(project))"
+            }
+            return taskStr
+        } ?? []
+
+        // Convert follow-ups to display strings
+        self.reminders = response.briefing.followUps?.map { $0.title } ?? []
+
+        // Weather
+        self.weather = response.briefing.weather?.displayString
+
+        // Extract insights from summary if present, or use email highlights
+        if let emails = response.briefing.emails, let highlights = emails.highlights, !highlights.isEmpty {
+            self.insights = "Email: " + highlights.joined(separator: ". ")
+        } else {
+            self.insights = nil
+        }
+
+        // Parse created at time
+        let isoFormatter = ISO8601DateFormatter()
+        if let date = isoFormatter.date(from: response.generatedAt) {
+            self.createdAt = date
+        } else {
+            self.createdAt = Date()
+        }
+    }
+
+    // Manual initializer for compatibility
+    init(
+        id: String,
+        title: String,
+        summary: String,
+        events: [String],
+        tasks: [String],
+        reminders: [String],
+        weather: String?,
+        insights: String?,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.dateKey = id
+        self.title = title
+        self.summary = summary
+        self.events = events
+        self.tasks = tasks
+        self.reminders = reminders
+        self.weather = weather
+        self.insights = insights
+        self.createdAt = createdAt
+    }
+
+    private static func formatEventTime(_ isoString: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        var date = isoFormatter.date(from: isoString)
+        if date == nil {
+            isoFormatter.formatOptions = [.withInternetDateTime]
+            date = isoFormatter.date(from: isoString)
+        }
+
+        guard let eventDate = date else { return "" }
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeStyle = .short
+        return timeFormatter.string(from: eventDate)
+    }
 }
 
 // MARK: - Preview
