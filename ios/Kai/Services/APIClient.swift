@@ -372,7 +372,7 @@ final class APIClient {
     // MARK: - Conversation Methods
 
     /// Fetches all conversations for the current user.
-    func getConversations() async throws -> [Conversation] {
+    func getConversations() async throws -> [ConversationSummary] {
         return try await request(.conversations, method: .get)
     }
 

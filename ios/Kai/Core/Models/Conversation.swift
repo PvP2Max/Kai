@@ -126,4 +126,30 @@ extension ConversationSummary {
         }
         return "New Conversation"
     }
+
+    /// Date section for grouping
+    var dateSection: String {
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(updatedAt) {
+            return "Today"
+        } else if calendar.isDateInYesterday(updatedAt) {
+            return "Yesterday"
+        } else if calendar.isDate(updatedAt, equalTo: Date(), toGranularity: .weekOfYear) {
+            return "This Week"
+        } else if calendar.isDate(updatedAt, equalTo: Date(), toGranularity: .month) {
+            return "This Month"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: updatedAt)
+        }
+    }
+
+    /// Formatted time for display
+    var formattedTime: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: updatedAt, relativeTo: Date())
+    }
 }

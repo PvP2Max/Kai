@@ -4,7 +4,7 @@ struct ConversationListView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ConversationListViewModel()
 
-    let onConversationSelected: (Conversation) -> Void
+    let onConversationSelected: (ConversationSummary) -> Void
 
     var body: some View {
         NavigationStack {
@@ -82,7 +82,7 @@ struct ConversationListView: View {
 // MARK: - Conversation Row View
 
 struct ConversationRowView: View {
-    let conversation: Conversation
+    let conversation: ConversationSummary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -98,24 +98,11 @@ struct ConversationRowView: View {
                     .foregroundColor(.secondary)
             }
 
-            if let preview = conversation.lastMessagePreview {
-                Text(preview)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-            }
-
             HStack(spacing: 8) {
                 if conversation.messageCount > 0 {
-                    Label("\(conversation.messageCount)", systemImage: "message")
+                    Label("\(conversation.messageCount) messages", systemImage: "message")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                }
-
-                if conversation.hasToolCalls {
-                    Label("Tools used", systemImage: "wrench.and.screwdriver")
-                        .font(.caption2)
-                        .foregroundColor(.blue)
                 }
             }
         }
@@ -149,12 +136,12 @@ struct EmptyConversationsView: View {
 
 @MainActor
 class ConversationListViewModel: ObservableObject {
-    @Published var conversations: [Conversation] = []
+    @Published var conversations: [ConversationSummary] = []
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
 
-    var groupedConversations: [String: [Conversation]] {
+    var groupedConversations: [String: [ConversationSummary]] {
         Dictionary(grouping: conversations) { conversation in
             conversation.dateSection
         }
@@ -182,7 +169,7 @@ class ConversationListViewModel: ObservableObject {
         await loadConversations()
     }
 
-    func deleteConversation(_ conversation: Conversation) async {
+    func deleteConversation(_ conversation: ConversationSummary) async {
         do {
             try await APIClient.shared.deleteConversation(id: conversation.id)
             conversations.removeAll { $0.id == conversation.id }

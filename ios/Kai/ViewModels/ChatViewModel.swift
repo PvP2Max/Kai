@@ -161,18 +161,7 @@ class ChatViewModel: ObservableObject {
     /// Load all conversations for the current user
     func loadConversations() async {
         do {
-            let response: [Conversation] = try await apiClient.getConversations()
-
-            // Convert to ConversationSummary
-            conversations = response.map { item in
-                ConversationSummary(
-                    id: item.id,
-                    title: item.title,
-                    createdAt: item.createdAt,
-                    updatedAt: item.updatedAt,
-                    messageCount: item.messages.count
-                )
-            }
+            conversations = try await apiClient.getConversations()
         } catch let error as APIError {
             // 404 just means no conversations yet - not an error
             if case .notFound = error {
