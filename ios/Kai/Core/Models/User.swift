@@ -13,6 +13,9 @@ struct User: Codable, Identifiable, Equatable, Sendable {
     /// User's display name
     let name: String
 
+    /// User's timezone (IANA format, e.g. "America/Chicago")
+    let timezone: String
+
     /// When the user account was created
     let createdAt: Date
 
@@ -37,14 +40,16 @@ struct User: Codable, Identifiable, Equatable, Sendable {
         id: UUID(),
         email: "user@example.com",
         name: "John Doe",
+        timezone: TimeZone.current.identifier,
         createdAt: Date().addingTimeInterval(-86400 * 30),
         updatedAt: Date()
     )
 
-    init(id: UUID, email: String, name: String, createdAt: Date, updatedAt: Date) {
+    init(id: UUID, email: String, name: String, timezone: String, createdAt: Date, updatedAt: Date) {
         self.id = id
         self.email = email
         self.name = name
+        self.timezone = timezone
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -63,6 +68,17 @@ struct UserCreateRequest: Codable, Sendable {
 struct UserLoginRequest: Codable, Sendable {
     let email: String
     let password: String
+}
+
+/// Request body for updating user profile
+struct UserUpdateRequest: Codable, Sendable {
+    let name: String?
+    let timezone: String?
+
+    init(name: String? = nil, timezone: String? = nil) {
+        self.name = name
+        self.timezone = timezone
+    }
 }
 
 /// Authentication token response from the backend

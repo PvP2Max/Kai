@@ -8,7 +8,7 @@ from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import UserCreate, UserLogin, UserResponse, Token, TokenRefresh
+from app.schemas.auth import UserCreate, UserLogin, UserResponse, UserUpdate, Token, TokenRefresh
 from app.api.deps import (
     get_password_hash,
     verify_password,
@@ -112,4 +112,21 @@ async def refresh_token(token_data: TokenRefresh, db: AsyncSession = Depends(get
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user info."""
+    return current_user
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_me(
+    user_data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update current user info (name, timezone, etc.)."""
+    if user_data.name is not None:
+        current_user.name = user_data.name
+    if user_data.timezone is not None:
+        current_user.timezone = user_data.timezone
+
+    await db.commit()
+    await db.refresh(current_user)
     return current_user

@@ -66,9 +66,24 @@ export const authApi = {
     const response = await client.get('/auth/me')
     return response.data
   },
+  updateMe: async (updates: { name?: string; timezone?: string }) => {
+    const response = await client.put('/auth/me', updates)
+    return response.data
+  },
   logout: () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+  },
+  syncTimezone: async () => {
+    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    try {
+      const user = await authApi.me()
+      if (user.timezone !== browserTimezone) {
+        await authApi.updateMe({ timezone: browserTimezone })
+      }
+    } catch {
+      // Ignore errors - timezone sync is not critical
+    }
   },
 }
 

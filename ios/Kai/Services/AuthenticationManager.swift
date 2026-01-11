@@ -240,9 +240,48 @@ final class AuthenticationManager: ObservableObject {
             id: response.id,
             email: response.email,
             name: response.name,
+            timezone: response.timezone,
             createdAt: response.createdAt,
             updatedAt: response.updatedAt
         )
+
+        // Sync timezone if device timezone differs from stored
+        await syncTimezoneIfNeeded()
+    }
+
+    /// Syncs the device timezone to the backend if it differs from the stored value.
+    private func syncTimezoneIfNeeded() async {
+        let deviceTimezone = TimeZone.current.identifier
+
+        guard let user = currentUser, user.timezone != deviceTimezone else {
+            return
+        }
+
+        do {
+            let updateRequest = UserUpdateRequest(timezone: deviceTimezone)
+            let response: UserResponse = try await apiClient.request(
+                .me,
+                method: .put,
+                body: updateRequest
+            )
+
+            currentUser = User(
+                id: response.id,
+                email: response.email,
+                name: response.name,
+                timezone: response.timezone,
+                createdAt: response.createdAt,
+                updatedAt: response.updatedAt
+            )
+
+            #if DEBUG
+            print("[AuthenticationManager] Timezone synced to \(deviceTimezone)")
+            #endif
+        } catch {
+            #if DEBUG
+            print("[AuthenticationManager] Failed to sync timezone: \(error)")
+            #endif
+        }
     }
 
     private func checkBiometricAvailability() {

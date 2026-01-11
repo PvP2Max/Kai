@@ -6,6 +6,7 @@ import json
 from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict, Any, AsyncGenerator
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,19 @@ class ChatHandler:
         self.model_router = ModelRouter(self.routing_config)
         self.cost_tracker = CostTracker(db, user_id)
         self.tool_executor = ToolExecutor(db, user_id)
+        self._cached_timezone: Optional[str] = None
+
+    async def _get_user_timezone(self) -> str:
+        """Get the user's timezone from the database."""
+        if self._cached_timezone:
+            return self._cached_timezone
+
+        result = await self.db.execute(
+            select(User.timezone).where(User.id == self.user_id)
+        )
+        timezone = result.scalar_one_or_none()
+        self._cached_timezone = timezone or "America/Chicago"
+        return self._cached_timezone
 
     async def get_or_create_conversation(
         self,
@@ -126,9 +140,14 @@ class ChatHandler:
         self.db.add(activity)
         await self.db.commit()
 
-    def _build_system_prompt(self) -> str:
-        """Build the system prompt for Kai."""
-        today = date.today()
+    async def _build_system_prompt(self) -> str:
+        """Build the system prompt for Kai using the user's timezone."""
+        user_tz = await self._get_user_timezone()
+        try:
+            tz = ZoneInfo(user_tz)
+        except Exception:
+            tz = ZoneInfo("America/Chicago")
+        today = datetime.now(tz).date()
         return f"""You are Kai (Kamron's Adaptive Intelligence), a personal AI assistant for Kamron.
 
 Today's date is {today.strftime('%A, %B %d, %Y')}.
@@ -223,7 +242,7 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
         Implements agentic loop: call Claude, execute tools if needed,
         continue until no more tool calls or max iterations reached.
         """
-        system_prompt = self._build_system_prompt()
+        system_prompt = await self._build_system_prompt()
         all_tool_calls = []
         total_input_tokens = 0
         total_output_tokens = 0
@@ -447,7 +466,7 @@ Please complete this step of the task."""
             conversation_history=history,
         )
 
-        system_prompt = self._build_system_prompt()
+        system_prompt = await self._build_system_prompt()
         full_response = ""
 
         async with self.client.messages.stream(

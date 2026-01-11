@@ -549,6 +549,7 @@ struct UserResponse: Decodable {
     let id: UUID
     let email: String
     let name: String
+    let timezone: String
     let createdAt: Date
     let updatedAt: Date
 }

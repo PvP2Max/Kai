@@ -6,6 +6,7 @@ interface User {
   id: string
   email: string
   name: string
+  timezone: string
 }
 
 export function useAuth() {
@@ -24,22 +25,26 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login(email, password),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       localStorage.setItem('access_token', data.access_token)
       localStorage.setItem('refresh_token', data.refresh_token)
       setIsAuthenticated(true)
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      // Sync browser timezone to backend
+      await authApi.syncTimezone()
     },
   })
 
   const registerMutation = useMutation({
     mutationFn: ({ email, password, name }: { email: string; password: string; name: string }) =>
       authApi.register(email, password, name),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       localStorage.setItem('access_token', data.access_token)
       localStorage.setItem('refresh_token', data.refresh_token)
       setIsAuthenticated(true)
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      // Sync browser timezone to backend
+      await authApi.syncTimezone()
     },
   })
 
@@ -53,6 +58,16 @@ export function useAuth() {
     const token = localStorage.getItem('access_token')
     setIsAuthenticated(!!token)
   }, [])
+
+  // Sync timezone when user data is loaded (for existing sessions)
+  useEffect(() => {
+    if (user) {
+      const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (user.timezone !== browserTimezone) {
+        authApi.syncTimezone()
+      }
+    }
+  }, [user])
 
   return {
     user,

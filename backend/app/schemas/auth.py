@@ -22,11 +22,17 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     name: str
+    timezone: str
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class Token(BaseModel):
