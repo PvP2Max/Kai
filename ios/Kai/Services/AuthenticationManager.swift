@@ -240,7 +240,7 @@ final class AuthenticationManager: ObservableObject {
             id: response.id,
             email: response.email,
             name: response.name,
-            timezone: response.timezone,
+            timezone: response.timezone ?? TimeZone.current.identifier,
             createdAt: response.createdAt,
             updatedAt: response.updatedAt
         )
@@ -269,7 +269,7 @@ final class AuthenticationManager: ObservableObject {
                 id: response.id,
                 email: response.email,
                 name: response.name,
-                timezone: response.timezone,
+                timezone: response.timezone ?? deviceTimezone,
                 createdAt: response.createdAt,
                 updatedAt: response.updatedAt
             )

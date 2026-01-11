@@ -549,7 +549,7 @@ struct UserResponse: Decodable {
     let id: UUID
     let email: String
     let name: String
-    let timezone: String
+    let timezone: String?  // Optional until migration is run
     let createdAt: Date
     let updatedAt: Date
 }
