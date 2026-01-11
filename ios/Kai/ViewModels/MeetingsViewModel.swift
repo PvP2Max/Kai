@@ -67,6 +67,7 @@ final class MeetingsViewModel: ObservableObject {
             }
 
             let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .custom { decoder in
                 let container = try decoder.singleValueContainer()
                 let dateString = try container.decode(String.self)
@@ -161,6 +162,7 @@ final class MeetingsViewModel: ObservableObject {
             }
 
             let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(Meeting.self, from: data)
         } catch {
@@ -217,6 +219,7 @@ final class MeetingsViewModel: ObservableObject {
         }
 
         let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(Meeting.self, from: data)
     }
@@ -271,6 +274,7 @@ final class MeetingsViewModel: ObservableObject {
         uploadProgress = 1.0
 
         let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
 
         // The response might be MeetingUploadResponse or Meeting depending on API version
