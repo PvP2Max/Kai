@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0CB654A02F138990000D3BD8 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB6549F2F138990000D3BD8 /* LocationManager.swift */; };
 		A1000001001 /* KaiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001001 /* KaiApp.swift */; };
 		A1000001002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001002 /* AppDelegate.swift */; };
 		A1000001003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001003 /* MainTabView.swift */; };
@@ -88,6 +89,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0CB6549F2F138990000D3BD8 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		A2000001001 /* KaiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaiApp.swift; sourceTree = "<group>"; };
 		A2000001002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A2000001003 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -257,6 +259,7 @@
 		C5000005001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				0CB6549F2F138990000D3BD8 /* LocationManager.swift */,
 				A2000005001 /* APIClient.swift */,
 				A2000005002 /* KeychainManager.swift */,
 				A2000005003 /* SharedKeychain.swift */,
@@ -505,6 +508,7 @@
 				A1000003005 /* Meeting.swift in Sources */,
 				A1000003006 /* CalendarEvent.swift in Sources */,
 				A1000003007 /* Note.swift in Sources */,
+				0CB654A02F138990000D3BD8 /* LocationManager.swift in Sources */,
 				A1000004001 /* OfflineQueue.swift in Sources */,
 				A1000005001 /* APIClient.swift in Sources */,
 				A1000005002 /* KeychainManager.swift in Sources */,

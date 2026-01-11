@@ -36,6 +36,7 @@ class ChatHandler:
         self.cost_tracker = CostTracker(db, user_id)
         self.tool_executor = ToolExecutor(db, user_id)
         self._cached_timezone: Optional[str] = None
+        self._user_location: Optional[Dict[str, float]] = None
 
     async def _get_user_timezone(self) -> str:
         """Get the user's timezone from the database."""
@@ -215,6 +216,8 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
         source: str = "web",
         attachments: Optional[List[Dict]] = None,
         force_model: Optional[str] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Process an incoming message and generate a response.
@@ -225,10 +228,16 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
             source: Message source (web, ios, siri, watch)
             attachments: Optional file attachments
             force_model: Force a specific model tier
+            latitude: User's current latitude (for location-based features)
+            longitude: User's current longitude (for location-based features)
 
         Returns:
             Response dict with assistant reply and metadata
         """
+        # Store user location for tool execution
+        if latitude is not None and longitude is not None:
+            self._user_location = {"latitude": latitude, "longitude": longitude}
+            self.tool_executor.set_user_location(latitude, longitude)
         # Get or create conversation
         conversation = await self.get_or_create_conversation(conversation_id, source)
 

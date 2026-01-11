@@ -87,22 +87,69 @@ export const authApi = {
   },
 }
 
+// Location helper for weather and location-based features
+let cachedLocation: { latitude: number; longitude: number } | null = null
+let locationPromise: Promise<{ latitude: number; longitude: number } | null> | null = null
+
+const getLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+  // Return cached location if available and recent (within 5 minutes)
+  if (cachedLocation) {
+    return cachedLocation
+  }
+
+  // If already fetching, wait for that promise
+  if (locationPromise) {
+    return locationPromise
+  }
+
+  // Start fetching location
+  locationPromise = new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        cachedLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }
+        resolve(cachedLocation)
+        locationPromise = null
+      },
+      () => {
+        resolve(null)
+        locationPromise = null
+      },
+      { timeout: 5000, maximumAge: 300000 } // 5s timeout, 5min cache
+    )
+  })
+
+  return locationPromise
+}
+
 // Chat API
 export const chatApi = {
   send: async (message: string, conversationId?: string) => {
+    // Get location for weather and other location-based features
+    const location = await getLocation()
+
     const response = await client.post('/chat', {
       message,
       conversation_id: conversationId,
       source: 'web',
+      latitude: location?.latitude,
+      longitude: location?.longitude,
     })
     return response.data
   },
   getConversations: async () => {
-    const response = await client.get('/chat/conversations')
+    const response = await client.get('/conversations')
     return response.data
   },
   getConversation: async (id: string) => {
-    const response = await client.get(`/chat/conversations/${id}`)
+    const response = await client.get(`/conversations/${id}`)
     return response.data
   },
 }

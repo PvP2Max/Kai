@@ -88,10 +88,24 @@ struct ChatRequest: Codable, Sendable {
     /// Source of the message (e.g., "ios", "siri", "web")
     let source: ChatSource
 
-    init(message: String, conversationId: UUID? = nil, source: ChatSource = .ios) {
+    /// User's current latitude (for location-based features like weather)
+    let latitude: Double?
+
+    /// User's current longitude (for location-based features like weather)
+    let longitude: Double?
+
+    init(
+        message: String,
+        conversationId: UUID? = nil,
+        source: ChatSource = .ios,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) {
         self.message = message
         self.conversationId = conversationId
         self.source = source
+        self.latitude = latitude
+        self.longitude = longitude
     }
 }
 

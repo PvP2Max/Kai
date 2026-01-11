@@ -173,23 +173,33 @@ final class MeetingsViewModel: ObservableObject {
 
     /// Deletes a meeting
     func deleteMeeting(id: UUID) async throws {
+        // Optimistic delete - remove from local list first for smooth UI
+        let removedMeeting = meetings.first { $0.id == id }
+        meetings.removeAll { $0.id == id }
+
         let url = baseURL.appendingPathComponent("/api/meetings/\(id)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         addAuthHeader(to: &request)
 
-        let (_, response) = try await session.data(for: request)
+        do {
+            let (_, response) = try await session.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw MeetingsError.invalidResponse
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw MeetingsError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 || httpResponse.statusCode == 204 else {
+                throw MeetingsError.serverError(statusCode: httpResponse.statusCode)
+            }
+        } catch {
+            // Restore the meeting if delete failed
+            if let meeting = removedMeeting {
+                meetings.append(meeting)
+                meetings.sort { ($0.eventStart ?? .distantPast) > ($1.eventStart ?? .distantPast) }
+            }
+            throw error
         }
-
-        guard httpResponse.statusCode == 200 || httpResponse.statusCode == 204 else {
-            throw MeetingsError.serverError(statusCode: httpResponse.statusCode)
-        }
-
-        // Remove from local list
-        meetings.removeAll { $0.id == id }
     }
 
     // MARK: - Private Methods

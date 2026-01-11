@@ -28,6 +28,13 @@ class ToolExecutor:
         self.db = db
         self.user_id = user_id
         self._services = {}
+        self._user_latitude: Optional[float] = None
+        self._user_longitude: Optional[float] = None
+
+    def set_user_location(self, latitude: float, longitude: float):
+        """Set the user's current location for location-based services."""
+        self._user_latitude = latitude
+        self._user_longitude = longitude
 
     async def execute(self, tool_name: str, tool_input: Dict[str, Any]) -> Any:
         """
@@ -549,8 +556,19 @@ Thanks!"""
         try:
             from app.services.weather import WeatherService
             service = await self._get_service("weather", WeatherService)
+
+            location = input.get("location", "current")
+
+            # If location is "current" and we have user coordinates, use them
+            if location.lower() in ["current", "home"] and self._user_latitude and self._user_longitude:
+                return await service.get_forecast_by_coordinates(
+                    latitude=self._user_latitude,
+                    longitude=self._user_longitude,
+                    days=input.get("days", 1),
+                )
+
             return await service.get_forecast(
-                location=input.get("location", "current"),
+                location=location,
                 days=input.get("days", 1),
             )
         except Exception as e:

@@ -172,11 +172,13 @@ struct MeetingsListView: View {
     }
 
     private func deleteMeetings(at offsets: IndexSet) {
-        let meetingsToDelete = offsets.map { viewModel.meetings[$0] }
+        // Get the IDs before any mutation
+        let idsToDelete = offsets.map { viewModel.meetings[$0].id }
 
-        for meeting in meetingsToDelete {
-            Task {
-                try? await viewModel.deleteMeeting(id: meeting.id)
+        // Delete sequentially to avoid race conditions
+        Task {
+            for id in idsToDelete {
+                try? await viewModel.deleteMeeting(id: id)
             }
         }
     }

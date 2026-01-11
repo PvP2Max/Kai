@@ -17,7 +17,9 @@ class ActionTaken(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[UUID] = None
-    source: str = "web"  # 'siri' | 'web'
+    source: str = "web"  # 'siri' | 'web' | 'ios'
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class ChatResponse(BaseModel):

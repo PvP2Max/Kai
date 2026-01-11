@@ -42,6 +42,8 @@ async def chat(
             message=request.message,
             conversation_id=request.conversation_id,
             source=request.source,
+            latitude=request.latitude,
+            longitude=request.longitude,
         )
         return response
     except Exception as e:

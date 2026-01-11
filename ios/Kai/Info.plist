@@ -6,6 +6,8 @@
 	<string>Kai needs access to your calendar to display your events and help you manage your schedule.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Kai needs access to your calendar to display your events and help you manage your schedule.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kai uses your location to provide accurate weather forecasts and location-based assistance.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Kai needs microphone access to record meetings for transcription.</string>
 	<key>UIBackgroundModes</key>

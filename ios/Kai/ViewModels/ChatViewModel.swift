@@ -50,6 +50,8 @@ class ChatViewModel: ObservableObject {
     init() {
         loadQueuedMessages()
         setupNetworkObserver()
+        // Request location permission for weather and location-based features
+        LocationManager.shared.requestPermission()
     }
 
     // MARK: - Network Observer
@@ -98,17 +100,22 @@ class ChatViewModel: ObservableObject {
 
         isLoading = true
 
+        // Get current location for weather and other location-based features
+        let coordinates = LocationManager.shared.coordinates
+
         do {
-            let request = ChatRequest(
+            let chatRequest = ChatRequest(
                 message: messageContent,
                 conversationId: currentConversationId,
-                source: .ios
+                source: .ios,
+                latitude: coordinates?.latitude,
+                longitude: coordinates?.longitude
             )
 
             let response: ChatResponse = try await apiClient.request(
                 .chat,
                 method: .post,
-                body: request
+                body: chatRequest
             )
 
             // Update conversation ID if this was a new conversation

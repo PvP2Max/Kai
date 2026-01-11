@@ -148,6 +148,39 @@ async def get_meeting(
     return meeting
 
 
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting(
+    meeting_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a meeting and its associated files."""
+    result = await db.execute(
+        select(Meeting).where(
+            Meeting.id == meeting_id,
+            Meeting.user_id == current_user.id,
+        )
+    )
+    meeting = result.scalar_one_or_none()
+
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    # Delete audio file if it exists
+    if meeting.audio_file_path and os.path.exists(meeting.audio_file_path):
+        try:
+            os.remove(meeting.audio_file_path)
+        except OSError:
+            pass  # Continue even if file deletion fails
+
+    # Delete from database
+    await db.delete(meeting)
+    await db.commit()
+
+
 @router.post("/{meeting_id}/reprocess", response_model=MeetingResponse)
 async def reprocess_meeting(
     meeting_id: UUID,

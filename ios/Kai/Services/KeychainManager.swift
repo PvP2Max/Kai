@@ -24,14 +24,10 @@ final class KeychainManager {
         static let tokenExpiry = "com.kai.tokenExpiry"
     }
 
-    /// App Group identifier for sharing keychain with extensions.
-    /// Update this to match your actual App Group identifier.
-    private let appGroupIdentifier = "group.com.kai.shared"
-
     /// Keychain access group for sharing between app and extensions.
-    private var accessGroup: String {
-        return appGroupIdentifier
-    }
+    /// Set to nil to use the app's default keychain (no sharing with extensions).
+    /// To enable extension sharing, set this to "$(AppIdentifierPrefix)com.arcticauradesigns.kai.shared"
+    private let accessGroup: String? = nil
 
     // MARK: - Initialization
 
@@ -118,9 +114,11 @@ final class KeychainManager {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
-        // Add access group for sharing with extensions
+        // Add access group for sharing with extensions (if configured)
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = accessGroup
+        if let accessGroup = accessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
         #endif
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -139,7 +137,9 @@ final class KeychainManager {
         ]
 
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = accessGroup
+        if let accessGroup = accessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
         #endif
 
         var result: AnyObject?
@@ -161,7 +161,9 @@ final class KeychainManager {
         ]
 
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = accessGroup
+        if let accessGroup = accessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
         #endif
 
         SecItemDelete(query as CFDictionary)

@@ -58,6 +58,30 @@ class WeatherService:
 
         return None
 
+    async def get_forecast_by_coordinates(
+        self,
+        latitude: float,
+        longitude: float,
+        days: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Get weather forecast using coordinates directly.
+
+        Args:
+            latitude: Latitude of the location
+            longitude: Longitude of the location
+            days: Number of forecast days (1-16)
+
+        Returns:
+            Weather forecast data
+        """
+        coords = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "name": "Current Location",
+        }
+        return await self._fetch_forecast(coords, days)
+
     async def get_forecast(
         self,
         location: str = "current",
@@ -77,6 +101,24 @@ class WeatherService:
 
         if not coords:
             return {"error": f"Location '{location}' not found"}
+
+        return await self._fetch_forecast(coords, days)
+
+    async def _fetch_forecast(
+        self,
+        coords: Dict[str, Any],
+        days: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Internal method to fetch forecast data from API.
+
+        Args:
+            coords: Dictionary with latitude, longitude, and optionally name/country
+            days: Number of forecast days (1-16)
+
+        Returns:
+            Weather forecast data
+        """
 
         days = min(max(1, days), 16)  # Clamp to 1-16
 
@@ -150,7 +192,7 @@ class WeatherService:
                 })
 
             return {
-                "location": coords.get("name", location),
+                "location": coords.get("name", "Unknown"),
                 "country": coords.get("country"),
                 "current": current_weather,
                 "daily": daily_forecast,
