@@ -121,7 +121,8 @@ final class RemindersManager: ObservableObject {
     func fetchAllReminders() async -> [EKReminder] {
         guard isAuthorized else {
             let granted = await requestAccess()
-            guard granted else { return [] }
+            if !granted { return [] }
+            return await fetchAllReminders()
         }
 
         let calendars = eventStore.calendars(for: .reminder)
@@ -150,7 +151,8 @@ final class RemindersManager: ObservableObject {
     func fetchReminders(from listNames: [String]) async -> [EKReminder] {
         guard isAuthorized else {
             let granted = await requestAccess()
-            guard granted else { return [] }
+            if !granted { return [] }
+            return await fetchReminders(from: listNames)
         }
 
         let calendars = eventStore.calendars(for: .reminder)
@@ -171,7 +173,8 @@ final class RemindersManager: ObservableObject {
     func fetchRemindersDueToday() async -> [EKReminder] {
         guard isAuthorized else {
             let granted = await requestAccess()
-            guard granted else { return [] }
+            if !granted { return [] }
+            return await fetchRemindersDueToday()
         }
 
         let calendars = eventStore.calendars(for: .reminder)
@@ -203,9 +206,10 @@ final class RemindersManager: ObservableObject {
     ) async throws -> EKReminder {
         guard isAuthorized else {
             let granted = await requestAccess()
-            guard granted else {
+            if !granted {
                 throw RemindersError.notAuthorized
             }
+            return try await createReminder(title: title, notes: notes, dueDate: dueDate, listName: listName, priority: priority)
         }
 
         let reminder = EKReminder(eventStore: eventStore)
