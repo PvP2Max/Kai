@@ -8,16 +8,16 @@ struct MainTabView: View {
     enum Tab: Int, CaseIterable {
         case chat
         case calendar
+        case projects
         case record
-        case meetings
         case more
 
         var title: String {
             switch self {
             case .chat: return "Chat"
             case .calendar: return "Calendar"
+            case .projects: return "Projects"
             case .record: return "Record"
-            case .meetings: return "Meetings"
             case .more: return "More"
             }
         }
@@ -26,8 +26,8 @@ struct MainTabView: View {
             switch self {
             case .chat: return "house.fill"
             case .calendar: return "calendar"
+            case .projects: return "folder.fill"
             case .record: return "mic.circle.fill"
-            case .meetings: return "person.3.fill"
             case .more: return "ellipsis.circle"
             }
         }
@@ -47,6 +47,12 @@ struct MainTabView: View {
                 }
                 .tag(Tab.calendar)
 
+            ProjectsView()
+                .tabItem {
+                    Label(Tab.projects.title, systemImage: Tab.projects.icon)
+                }
+                .tag(Tab.projects)
+
             RecordingView { url, title in
                     // Handle recording completion - upload to backend
                     print("Recording completed: \(url), title: \(title ?? "Untitled")")
@@ -55,12 +61,6 @@ struct MainTabView: View {
                     Label(Tab.record.title, systemImage: Tab.record.icon)
                 }
                 .tag(Tab.record)
-
-            MeetingsListView()
-                .tabItem {
-                    Label(Tab.meetings.title, systemImage: Tab.meetings.icon)
-                }
-                .tag(Tab.meetings)
 
             MoreView()
                 .tabItem {
@@ -88,8 +88,8 @@ struct MainTabView: View {
         switch type {
         case "calendar_reminder":
             selectedTab = .calendar
-        case "meeting_summary":
-            selectedTab = .meetings
+        case "meeting_summary", "project_update":
+            selectedTab = .projects
         case "briefing":
             selectedTab = .more
         case "task_reminder":

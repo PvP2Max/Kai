@@ -10,6 +10,10 @@
 	<string>Kai uses your location to provide accurate weather forecasts and location-based assistance.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Kai needs microphone access to record meetings for transcription.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Kai needs access to your reminders to include them in briefings and help manage your tasks.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Kai needs access to your reminders to include them in briefings and help manage your tasks.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

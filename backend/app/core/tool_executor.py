@@ -119,26 +119,87 @@ class ToolExecutor:
 
     # Reminder Tools
     async def _execute_get_reminders(self, input: Dict) -> Any:
-        """Get reminders from Apple Reminders."""
-        # Note: This requires Apple Script integration on macOS
-        # For now, return placeholder
+        """Get reminders from synced Apple Reminders."""
+        from app.models.synced_reminder import SyncedReminder
+        from app.models.project import Project
+
+        include_completed = input.get("include_completed", False)
+
+        query = select(SyncedReminder).where(SyncedReminder.user_id == self.user_id)
+
+        if not include_completed:
+            query = query.where(SyncedReminder.is_completed == False)
+
+        query = query.order_by(SyncedReminder.due_date.asc().nullslast())
+
+        result = await self.db.execute(query)
+        reminders = result.scalars().all()
+
+        # Get project names for grouping
+        project_ids = {r.project_id for r in reminders if r.project_id}
+        projects = {}
+        if project_ids:
+            project_result = await self.db.execute(
+                select(Project).where(Project.id.in_(project_ids))
+            )
+            projects = {p.id: p.name for p in project_result.scalars().all()}
+
+        # Format reminders with project info
+        formatted = []
+        for r in reminders:
+            formatted.append({
+                "id": str(r.id),
+                "title": r.title,
+                "notes": r.notes,
+                "due_date": r.due_date.isoformat() if r.due_date else None,
+                "priority": r.priority,
+                "is_completed": r.is_completed,
+                "list_name": r.list_name,
+                "project": projects.get(r.project_id) if r.project_id else None,
+            })
+
         return {
-            "reminders": [],
-            "note": "Apple Reminders integration not configured"
+            "reminders": formatted,
+            "count": len(formatted),
         }
 
     async def _execute_create_reminder(self, input: Dict) -> Any:
-        """Create a reminder in Apple Reminders."""
+        """Create a reminder (synced from iOS)."""
+        # Note: Reminders are created via iOS app and synced to backend
+        # This tool is for reference - actual creation happens on device
         return {
             "success": False,
-            "note": "Apple Reminders integration not configured"
+            "note": "Reminders should be created in the iOS Reminders app and will sync automatically"
         }
 
     async def _execute_complete_reminder(self, input: Dict) -> Any:
-        """Mark a reminder as complete."""
+        """Mark a synced reminder as complete."""
+        from app.models.synced_reminder import SyncedReminder
+        from datetime import datetime
+
+        reminder_id = input.get("reminder_id")
+        if not reminder_id:
+            return {"success": False, "error": "reminder_id required"}
+
+        result = await self.db.execute(
+            select(SyncedReminder).where(
+                SyncedReminder.id == reminder_id,
+                SyncedReminder.user_id == self.user_id,
+            )
+        )
+        reminder = result.scalar_one_or_none()
+
+        if not reminder:
+            return {"success": False, "error": "Reminder not found"}
+
+        reminder.is_completed = True
+        reminder.completed_at = datetime.utcnow()
+        await self.db.commit()
+
         return {
-            "success": False,
-            "note": "Apple Reminders integration not configured"
+            "success": True,
+            "reminder_id": str(reminder.id),
+            "title": reminder.title,
         }
 
     # Note Tools
@@ -623,6 +684,101 @@ Thanks!"""
 
         await self.db.commit()
         return {"success": True}
+
+    # Knowledge Tools
+    async def _execute_get_relevant_knowledge(self, input: Dict) -> Any:
+        """Get knowledge relevant to the current query."""
+        from app.services.knowledge import KnowledgeService
+
+        service = KnowledgeService(self.db, self.user_id)
+        query = input["query"]
+        categories = input.get("categories")
+        max_results = input.get("max_results", 10)
+
+        knowledge_items = await service.get_relevant_knowledge(
+            query_text=query,
+            max_results=max_results,
+        )
+
+        return {
+            "knowledge": [
+                {
+                    "id": str(k.id),
+                    "category": k.category,
+                    "topic": k.topic,
+                    "value": k.value,
+                    "confidence": k.confidence,
+                    "source": k.source,
+                }
+                for k in knowledge_items
+            ],
+            "count": len(knowledge_items),
+        }
+
+    async def _execute_learn_about_user(self, input: Dict) -> Any:
+        """Store knowledge about the user."""
+        from app.services.knowledge import KnowledgeService
+
+        service = KnowledgeService(self.db, self.user_id)
+
+        knowledge = await service.learn(
+            category=input["category"],
+            topic=input["topic"],
+            value=input["value"],
+            confidence=input.get("confidence", 0.8),
+            source="explicit" if input.get("confidence", 0.8) >= 0.9 else "conversation",
+        )
+
+        return {
+            "success": True,
+            "knowledge_id": str(knowledge.id),
+            "message": f"Remembered: {knowledge.topic} = {knowledge.value}",
+        }
+
+    async def _execute_get_knowledge_summary(self, input: Dict) -> Any:
+        """Get a summary of all stored knowledge."""
+        from app.services.knowledge import KnowledgeService
+
+        service = KnowledgeService(self.db, self.user_id)
+        summary = await service.get_knowledge_summary()
+
+        # Also get all knowledge items for display
+        all_knowledge = await service.get_all_knowledge()
+
+        # Group by category
+        by_category = {}
+        for k in all_knowledge:
+            if k.category not in by_category:
+                by_category[k.category] = []
+            by_category[k.category].append({
+                "id": str(k.id),
+                "topic": k.topic,
+                "value": k.value,
+                "confidence": k.confidence,
+            })
+
+        return {
+            "summary": summary,
+            "knowledge_by_category": by_category,
+        }
+
+    async def _execute_forget_knowledge(self, input: Dict) -> Any:
+        """Remove a piece of stored knowledge."""
+        from app.services.knowledge import KnowledgeService
+        from uuid import UUID as PyUUID
+
+        service = KnowledgeService(self.db, self.user_id)
+
+        try:
+            knowledge_id = PyUUID(input["knowledge_id"])
+        except ValueError:
+            return {"success": False, "error": "Invalid knowledge ID"}
+
+        success = await service.forget(knowledge_id)
+
+        if success:
+            return {"success": True, "message": "Knowledge item forgotten"}
+        return {"success": False, "error": "Knowledge item not found"}
 
     # Notification Tools
     async def _execute_send_push_notification(self, input: Dict) -> Any:

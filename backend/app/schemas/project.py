@@ -27,6 +27,7 @@ class ProjectResponse(BaseModel):
     updated_at: datetime
     note_count: int = 0
     meeting_count: int = 0
+    reminder_count: int = 0
 
     class Config:
         from_attributes = True
@@ -36,6 +37,7 @@ class ProjectDetailResponse(ProjectResponse):
     notes: List[dict] = []
     meetings: List[dict] = []
     action_items: List[dict] = []
+    reminders: List[dict] = []
 
 
 class ProjectStatusResponse(BaseModel):

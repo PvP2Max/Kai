@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.note import Note
     from app.models.meeting import Meeting
+    from app.models.synced_reminder import SyncedReminder
 
 
 class Project(Base):
@@ -44,3 +45,6 @@ class Project(Base):
     user: Mapped["User"] = relationship("User", back_populates="projects")
     notes: Mapped[list["Note"]] = relationship("Note", back_populates="project")
     meetings: Mapped[list["Meeting"]] = relationship("Meeting", back_populates="project")
+    synced_reminders: Mapped[list["SyncedReminder"]] = relationship(
+        "SyncedReminder", back_populates="project"
+    )

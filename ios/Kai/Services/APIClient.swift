@@ -193,6 +193,19 @@ final class APIClient {
         // Devices
         case registerDevice
 
+        // Projects
+        case projects
+        case project(id: String)
+
+        // Reminders
+        case reminders
+        case remindersDueToday
+        case remindersByProject
+        case remindersSync
+
+        // Custom path
+        case custom(String)
+
         var path: String {
             switch self {
             case .login:
@@ -231,6 +244,20 @@ final class APIClient {
                 return "/api/meetings/\(id)/transcribe"
             case .registerDevice:
                 return "/api/devices/register"
+            case .projects:
+                return "/api/projects"
+            case .project(let id):
+                return "/api/projects/\(id)"
+            case .reminders:
+                return "/api/reminders"
+            case .remindersDueToday:
+                return "/api/reminders/due-today"
+            case .remindersByProject:
+                return "/api/reminders/by-project"
+            case .remindersSync:
+                return "/api/reminders/sync"
+            case .custom(let path):
+                return "/api\(path)"
             }
         }
 

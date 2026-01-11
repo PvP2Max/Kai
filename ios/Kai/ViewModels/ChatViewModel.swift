@@ -36,6 +36,7 @@ class ChatViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var inputText: String = ""
     @Published var errorMessage: String?
+    @Published var lastInputWasVoice: Bool = false
 
     // MARK: - Private Properties
 
@@ -137,6 +138,10 @@ class ChatViewModel: ObservableObject {
             )
             messages.append(assistantMessage)
 
+            // Auto-speak response if the input was voice-triggered
+            SpeechService.shared.speakIfVoiceTriggered(response.response, wasVoiceInput: lastInputWasVoice)
+            lastInputWasVoice = false
+
             // Refresh conversations list
             await loadConversations()
 
@@ -205,6 +210,15 @@ class ChatViewModel: ObservableObject {
         messages = []
         inputText = ""
         errorMessage = nil
+        lastInputWasVoice = false
+    }
+
+    /// Send a message that was triggered by voice input
+    /// The response will be auto-spoken
+    func sendVoiceMessage(_ text: String) async {
+        inputText = text
+        lastInputWasVoice = true
+        await sendMessage()
     }
 
     /// Retry sending queued messages

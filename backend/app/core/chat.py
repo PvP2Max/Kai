@@ -178,36 +178,69 @@ Assistant: {assistant_response[:200]}"""
             # Don't fail the conversation if title generation fails
             print(f"Failed to generate conversation title: {e}")
 
-    async def _build_system_prompt(self) -> str:
-        """Build the system prompt for Kai using the user's timezone."""
+    async def _build_system_prompt(self, message: Optional[str] = None) -> str:
+        """Build the system prompt for Kai using the user's timezone and relevant knowledge."""
         user_tz = await self._get_user_timezone()
         try:
             tz = ZoneInfo(user_tz)
         except Exception:
             tz = ZoneInfo("America/Chicago")
         today = datetime.now(tz).date()
-        return f"""You are Kai (Kamron's Adaptive Intelligence), a personal AI assistant for Kamron.
+
+        # Get relevant knowledge if we have a message
+        knowledge_context = ""
+        if message:
+            knowledge_context = await self._get_relevant_knowledge_context(message)
+
+        base_prompt = f"""You are Kai (Kamron's Adaptive Intelligence), a personal AI assistant.
 
 Today's date is {today.strftime('%A, %B %d, %Y')}.
 
 Core Principles:
-1. You are Kamron's trusted assistant. Be helpful, proactive, and respect his preferences.
+1. You are a trusted assistant. Be helpful, proactive, and respect user preferences.
 2. Never make changes without explicit approval for important actions (calendar, emails).
 3. When proposing changes, clearly explain what you'll do and why.
-4. Learn from Kamron's patterns and preferences to provide better assistance over time.
-5. Keep responses concise but complete. Kamron values efficiency.
+4. Learn from patterns and preferences to provide better assistance over time.
+5. Keep responses concise but complete. Value efficiency.
 
-You have access to various tools to help manage Kamron's calendar, notes, reminders, emails,
+{knowledge_context}
+
+You have access to various tools to help manage calendar, notes, reminders, emails,
 projects, and more. Use them proactively to provide comprehensive assistance.
 
 Key behaviors:
 - For calendar changes: Always propose first using propose_schedule_optimization, never modify directly
 - For emails: Draft replies for review, never send directly
 - For meetings: Provide prep briefings with relevant context
-- Track follow-ups and remind Kamron of pending items
-- Learn preferences from explicit statements and inferred patterns
+- Track follow-ups and remind of pending items
+- IMPORTANT: When the user shares personal information (names, relationships, preferences, facts),
+  use the learn_about_user tool to remember it for future conversations.
+- Use get_relevant_knowledge to recall information about the user when relevant.
 
 Remember: You're building a long-term relationship. Be consistent, reliable, and personable."""
+
+        return base_prompt
+
+    async def _get_relevant_knowledge_context(self, message: str) -> str:
+        """Retrieve and format relevant knowledge for the system prompt."""
+        try:
+            from app.services.knowledge import KnowledgeService
+
+            service = KnowledgeService(self.db, self.user_id)
+            knowledge_items = await service.get_relevant_knowledge(
+                query_text=message,
+                max_results=8,  # Keep context small
+                min_confidence=0.4,
+            )
+
+            if not knowledge_items:
+                return ""
+
+            return service.format_knowledge_for_context(knowledge_items)
+        except Exception as e:
+            # Don't fail if knowledge retrieval fails
+            print(f"Failed to retrieve knowledge context: {e}")
+            return ""
 
     async def process_message(
         self,
@@ -264,6 +297,7 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
                 model=selected_model,
                 messages=history,
                 conversation_id=conversation.id,
+                user_message=message,
             )
 
         # Generate title for new conversations (first message)
@@ -287,6 +321,7 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
         messages: List[Dict[str, Any]],
         conversation_id: UUID,
         max_iterations: int = 10,
+        user_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Call Claude API and handle tool use loop.
@@ -294,7 +329,7 @@ Remember: You're building a long-term relationship. Be consistent, reliable, and
         Implements agentic loop: call Claude, execute tools if needed,
         continue until no more tool calls or max iterations reached.
         """
-        system_prompt = await self._build_system_prompt()
+        system_prompt = await self._build_system_prompt(user_message)
         all_tool_calls = []
         total_input_tokens = 0
         total_output_tokens = 0
@@ -518,7 +553,7 @@ Please complete this step of the task."""
             conversation_history=history,
         )
 
-        system_prompt = await self._build_system_prompt()
+        system_prompt = await self._build_system_prompt(message)
         full_response = ""
 
         async with self.client.messages.stream(
@@ -549,7 +584,7 @@ Please complete this step of the task."""
         )
 
     async def generate_daily_briefing(self, briefing_date: date = None) -> Dict[str, Any]:
-        """Generate daily briefing with calendar, weather, and priorities."""
+        """Generate daily briefing with calendar, weather, priorities, and emails."""
         if briefing_date is None:
             briefing_date = date.today()
 
@@ -577,22 +612,34 @@ Please complete this step of the task."""
             {"location": "current", "days": 1}
         )
 
+        # Get schedule-aware email summary
+        email_data = await self._get_briefing_emails()
+
+        # Get relevant user knowledge for personalization
+        knowledge_context = await self._get_relevant_knowledge_context(
+            "daily briefing schedule reminders priorities"
+        )
+
         # Generate briefing with Claude
         briefing_prompt = f"""Generate a concise daily briefing for {briefing_date.strftime('%A, %B %d, %Y')}.
+
+{knowledge_context}
 
 Calendar events: {json.dumps(calendar_data)}
 Pending reminders: {json.dumps(reminders)}
 Follow-ups waiting: {json.dumps(follow_ups)}
 Weather: {json.dumps(weather)}
+Email summary: {json.dumps(email_data)}
 
 Provide:
 1. A brief summary of the day
 2. Key events and times
-3. Top priorities
+3. Top priorities (from reminders, grouped by project if applicable)
 4. Any follow-ups that need attention
-5. Weather-appropriate suggestions
+5. Email highlights (if any important emails)
+6. Weather-appropriate suggestions
 
-Keep it concise and actionable."""
+Keep it concise and actionable. Use any known user preferences to personalize the briefing."""
 
         response = await self.client.messages.create(
             model=ModelTier.HAIKU.value,
@@ -613,7 +660,17 @@ Keep it concise and actionable."""
             "reminders": reminders,
             "follow_ups": follow_ups,
             "weather": weather,
+            "emails": email_data,
         }
+
+    async def _get_briefing_emails(self) -> Dict[str, Any]:
+        """Get schedule-aware emails for briefing."""
+        try:
+            from app.services.email import EmailService
+            email_service = EmailService(self.db, self.user_id)
+            return await email_service.get_briefing_emails()
+        except Exception as e:
+            return {"error": str(e), "note": "Email briefing not available"}
 
     async def generate_weekly_review(self, week_start: date = None) -> Dict[str, Any]:
         """Generate weekly review with accomplishments and patterns."""

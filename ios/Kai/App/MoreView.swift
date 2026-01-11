@@ -43,6 +43,30 @@ struct MoreView: View {
                     }
                 }
 
+                Section("Integrations") {
+                    NavigationLink {
+                        EmailAccountsView()
+                    } label: {
+                        MoreRowView(
+                            icon: "envelope.fill",
+                            iconColor: .blue,
+                            title: "Email Accounts",
+                            subtitle: "Manage connected email accounts"
+                        )
+                    }
+
+                    NavigationLink {
+                        RemindersSettingsView()
+                    } label: {
+                        MoreRowView(
+                            icon: "checklist",
+                            iconColor: .orange,
+                            title: "Reminders",
+                            subtitle: "Apple Reminders sync settings"
+                        )
+                    }
+                }
+
                 Section {
                     NavigationLink {
                         ActivityLogView()
@@ -159,6 +183,84 @@ struct HelpView: View {
         }
         .navigationTitle("Help & Support")
         .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+struct RemindersSettingsView: View {
+    @StateObject private var remindersManager = RemindersManager.shared
+    @State private var autoSync = true
+    @State private var syncFrequency = "hourly"
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Text("Status")
+                    Spacer()
+                    switch remindersManager.authorizationStatus {
+                    case .authorized, .fullAccess:
+                        Label("Connected", systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    case .denied, .restricted:
+                        Label("Denied", systemImage: "xmark.circle.fill")
+                            .foregroundColor(.red)
+                    default:
+                        Label("Not Connected", systemImage: "circle")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if remindersManager.authorizationStatus != .fullAccess {
+                    Button("Connect Apple Reminders") {
+                        Task {
+                            await remindersManager.requestAccess()
+                        }
+                    }
+                }
+            }
+
+            if remindersManager.authorizationStatus == .fullAccess ||
+               remindersManager.authorizationStatus == .authorized {
+                Section("Sync Settings") {
+                    Toggle("Auto-Sync to Kai", isOn: $autoSync)
+
+                    if autoSync {
+                        Picker("Sync Frequency", selection: $syncFrequency) {
+                            Text("Every Hour").tag("hourly")
+                            Text("Every 6 Hours").tag("6hours")
+                            Text("Daily").tag("daily")
+                        }
+                    }
+
+                    Button("Sync Now") {
+                        Task {
+                            await remindersManager.syncToBackend()
+                        }
+                    }
+                }
+
+                Section("Reminders") {
+                    HStack {
+                        Text("Total Reminders")
+                        Spacer()
+                        Text("\(remindersManager.reminders.count)")
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Text("Incomplete")
+                        Spacer()
+                        Text("\(remindersManager.reminders.filter { !$0.isCompleted }.count)")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Reminders")
+        .navigationBarTitleDisplayMode(.large)
+        .task {
+            await remindersManager.requestAccess()
+        }
     }
 }
 

@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import async_engine, Base
 from app.api import auth, chat, calendar, meetings, notes, activity, usage, routing
-from app.api import projects, follow_ups, read_later, preferences, briefings, devices
+from app.api import projects, follow_ups, read_later, preferences, briefings, devices, reminders, email_accounts
 
 
 @asynccontextmanager
@@ -62,6 +62,8 @@ app.include_router(read_later.router, prefix="/api/read-later", tags=["Read Late
 app.include_router(preferences.router, prefix="/api/preferences", tags=["Preferences"])
 app.include_router(briefings.router, prefix="/api/briefings", tags=["Briefings"])
 app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
+app.include_router(reminders.router, prefix="/api/reminders", tags=["Reminders"])
+app.include_router(email_accounts.router, prefix="/api", tags=["Email Accounts"])
 
 
 @app.get("/")

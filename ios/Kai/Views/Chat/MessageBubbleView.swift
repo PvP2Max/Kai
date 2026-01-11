@@ -12,6 +12,10 @@ struct MessageBubbleView: View {
 
     let message: Message
 
+    // MARK: - State
+
+    @ObservedObject private var speechService = SpeechService.shared
+
     // MARK: - Environment
 
     @Environment(\.colorScheme) private var colorScheme
@@ -75,10 +79,19 @@ struct MessageBubbleView: View {
                     .background(bubbleBackgroundColor)
                     .clipShape(MessageBubbleShape(isFromUser: false))
 
-                // Model indicator and timestamp
+                // Model indicator, speaker button, and timestamp
                 HStack(spacing: 8) {
                     if let model = message.modelUsed {
                         modelBadge(model)
+                    }
+
+                    // Speaker button for TTS
+                    Button {
+                        speechService.toggle(text: message.content)
+                    } label: {
+                        Image(systemName: speechService.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                            .font(.caption)
+                            .foregroundColor(speechService.isSpeaking ? .blue : .secondary)
                     }
 
                     Text(formatTime(message.createdAt))

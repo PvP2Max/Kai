@@ -14,6 +14,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.note import Note
 from app.models.meeting import Meeting
+from app.models.synced_reminder import SyncedReminder
 from app.schemas.project import (
     ProjectCreate,
     ProjectUpdate,
@@ -33,16 +34,40 @@ async def list_projects(
     current_user: User = Depends(get_current_user),
 ):
     """List all projects."""
+    # Get projects with counts using subqueries for accurate counts
+    note_count_subq = (
+        select(func.count(Note.id))
+        .where(Note.project_id == Project.id)
+        .correlate(Project)
+        .scalar_subquery()
+    )
+    meeting_count_subq = (
+        select(func.count(Meeting.id))
+        .where(Meeting.project_id == Project.id)
+        .correlate(Project)
+        .scalar_subquery()
+    )
+    reminder_count_subq = (
+        select(func.count(SyncedReminder.id))
+        .where(
+            SyncedReminder.project_id == Project.id,
+            SyncedReminder.is_completed == False,
+        )
+        .correlate(Project)
+        .scalar_subquery()
+    )
+
     query = select(
         Project,
-        func.count(Note.id.distinct()).label("note_count"),
-        func.count(Meeting.id.distinct()).label("meeting_count"),
-    ).outerjoin(Note).outerjoin(Meeting).where(Project.user_id == current_user.id)
+        note_count_subq.label("note_count"),
+        meeting_count_subq.label("meeting_count"),
+        reminder_count_subq.label("reminder_count"),
+    ).where(Project.user_id == current_user.id)
 
     if status_filter:
         query = query.where(Project.status == status_filter)
 
-    query = query.group_by(Project.id).order_by(Project.updated_at.desc())
+    query = query.order_by(Project.updated_at.desc())
 
     result = await db.execute(query)
     projects = []
@@ -56,8 +81,9 @@ async def list_projects(
                 status=project.status,
                 created_at=project.created_at,
                 updated_at=project.updated_at,
-                note_count=row[1],
-                meeting_count=row[2],
+                note_count=row[1] or 0,
+                meeting_count=row[2] or 0,
+                reminder_count=row[3] or 0,
             )
         )
 
@@ -90,6 +116,7 @@ async def create_project(
         updated_at=project.updated_at,
         note_count=0,
         meeting_count=0,
+        reminder_count=0,
     )
 
 
@@ -102,7 +129,11 @@ async def get_project(
     """Get a project with all related items."""
     result = await db.execute(
         select(Project)
-        .options(selectinload(Project.notes), selectinload(Project.meetings))
+        .options(
+            selectinload(Project.notes),
+            selectinload(Project.meetings),
+            selectinload(Project.synced_reminders),
+        )
         .where(
             Project.id == project_id,
             Project.user_id == current_user.id,
@@ -116,6 +147,9 @@ async def get_project(
             detail="Project not found",
         )
 
+    # Filter to only incomplete reminders
+    active_reminders = [r for r in project.synced_reminders if not r.is_completed]
+
     return ProjectDetailResponse(
         id=project.id,
         name=project.name,
@@ -125,6 +159,7 @@ async def get_project(
         updated_at=project.updated_at,
         note_count=len(project.notes),
         meeting_count=len(project.meetings),
+        reminder_count=len(active_reminders),
         notes=[
             {"id": str(n.id), "title": n.title, "created_at": n.created_at.isoformat()}
             for n in project.notes
@@ -132,6 +167,15 @@ async def get_project(
         meetings=[
             {"id": str(m.id), "title": m.event_title, "date": m.event_start.isoformat() if m.event_start else None}
             for m in project.meetings
+        ],
+        reminders=[
+            {
+                "id": str(r.id),
+                "title": r.title,
+                "due_date": r.due_date.isoformat() if r.due_date else None,
+                "priority": r.priority,
+            }
+            for r in active_reminders
         ],
     )
 
@@ -207,6 +251,7 @@ async def get_project_status(
             updated_at=project.updated_at,
             note_count=len(project.notes),
             meeting_count=len(project.meetings),
+            reminder_count=0,
         ),
         summary=summary,
         recent_activity=[],

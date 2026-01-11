@@ -380,6 +380,72 @@ TOOLS = [
         }
     },
 
+    # Knowledge & Learning Tools
+    {
+        "name": "get_relevant_knowledge",
+        "description": "Retrieve relevant knowledge about the user based on the current context. Use this to personalize responses with known facts about the user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The current context or query to find relevant knowledge for"},
+                "categories": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["personal", "relationships", "work", "preferences", "facts"]},
+                    "description": "Optional: specific categories to search"
+                },
+                "max_results": {"type": "integer", "default": 10}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "learn_about_user",
+        "description": "Store important information about the user for future reference. Use this when the user shares personal facts, preferences, relationships, or other information worth remembering.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "enum": ["personal", "relationships", "work", "preferences", "facts"],
+                    "description": "Category of knowledge"
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "Specific topic (e.g., 'spouse_name', 'job_title', 'preferred_meeting_time')"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "The actual information to remember"
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "How confident (0.5 for inferred, 0.8 for stated, 1.0 for explicit confirmation)",
+                    "default": 0.8
+                }
+            },
+            "required": ["category", "topic", "value"]
+        }
+    },
+    {
+        "name": "get_knowledge_summary",
+        "description": "Get a summary of all stored knowledge about the user, grouped by category",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "forget_knowledge",
+        "description": "Remove a piece of stored knowledge when asked by the user",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "knowledge_id": {"type": "string", "description": "ID of the knowledge item to forget"}
+            },
+            "required": ["knowledge_id"]
+        }
+    },
+
     # Notification Tools
     {
         "name": "send_push_notification",

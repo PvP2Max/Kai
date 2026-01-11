@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Calendar from './pages/Calendar'
 import Notes from './pages/Notes'
+import Projects from './pages/Projects'
 import Meetings from './pages/Meetings'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
@@ -44,6 +45,7 @@ function App() {
         <Route path="chat" element={<Chat />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="notes" element={<Notes />} />
+        <Route path="projects" element={<Projects />} />
         <Route path="meetings" element={<Meetings />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />

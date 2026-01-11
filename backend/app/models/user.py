@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from app.models.note import Note
     from app.models.project import Project
     from app.models.calendar_event import CalendarEvent
+    from app.models.synced_reminder import SyncedReminder
+    from app.models.user_knowledge import UserKnowledge
+    from app.models.email_account import EmailAccount, EmailBriefingConfig
 
 
 class User(Base):
@@ -46,4 +49,16 @@ class User(Base):
     )
     calendar_events: Mapped[list["CalendarEvent"]] = relationship(
         "CalendarEvent", back_populates="user", cascade="all, delete-orphan"
+    )
+    synced_reminders: Mapped[list["SyncedReminder"]] = relationship(
+        "SyncedReminder", back_populates="user", cascade="all, delete-orphan"
+    )
+    knowledge: Mapped[list["UserKnowledge"]] = relationship(
+        "UserKnowledge", back_populates="user", cascade="all, delete-orphan"
+    )
+    email_accounts: Mapped[list["EmailAccount"]] = relationship(
+        "EmailAccount", back_populates="user", cascade="all, delete-orphan"
+    )
+    email_briefing_config: Mapped["EmailBriefingConfig"] = relationship(
+        "EmailBriefingConfig", back_populates="user", cascade="all, delete-orphan", uselist=False
     )
