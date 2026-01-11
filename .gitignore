@@ -67,3 +67,14 @@ Thumbs.db
 
 # Alembic
 alembic/versions/*.pyc
+
+# iOS/Xcode
+ios/*/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM

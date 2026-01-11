@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Kai needs access to your calendar to display your events and help you manage your schedule.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Kai needs access to your calendar to display your events and help you manage your schedule.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kai needs microphone access to record meetings for transcription.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>AccentColor</string>
+		<key>UIImageName</key>
+		<string></string>
+	</dict>
+</dict>
+</plist>

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.conversation import Conversation
     from app.models.note import Note
     from app.models.project import Project
+    from app.models.calendar_event import CalendarEvent
 
 
 class User(Base):
@@ -41,4 +42,7 @@ class User(Base):
     )
     projects: Mapped[list["Project"]] = relationship(
         "Project", back_populates="user", cascade="all, delete-orphan"
+    )
+    calendar_events: Mapped[list["CalendarEvent"]] = relationship(
+        "CalendarEvent", back_populates="user", cascade="all, delete-orphan"
     )

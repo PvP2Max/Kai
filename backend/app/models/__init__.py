@@ -17,6 +17,7 @@ from app.models.preferences import (
 )
 from app.models.follow_up import FollowUp
 from app.models.read_later import ReadLater
+from app.models.calendar_event import CalendarEvent
 
 __all__ = [
     "User",
@@ -35,4 +36,5 @@ __all__ = [
     "RoutingSettings",
     "FollowUp",
     "ReadLater",
+    "CalendarEvent",
 ]
