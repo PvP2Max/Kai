@@ -134,6 +134,9 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .task {
+            await viewModel.refresh()
+        }
         .alert("Delete All Data", isPresented: $viewModel.showDeleteDataAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {

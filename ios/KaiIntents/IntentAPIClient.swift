@@ -10,9 +10,11 @@ actor IntentAPIClient {
     static let shared = IntentAPIClient()
 
     private let baseURL = URL(string: "https://kai.pvp2max.com")!
-    private let keychainServiceName = "com.arcticauradesigns.kai.auth"
-    private let keychainAccessGroup = "group.com.arcticauradesigns.kai"
-    private let accessTokenKey = "access_token"
+
+    // Must match SharedKeychain in main app and entitlements
+    private let keychainAccessGroup = "com.arcticauradesigns.kai.shared"
+    private let accessTokenKey = "com.kai.accessToken"
+    private let refreshTokenKey = "com.kai.refreshToken"
 
     private let session: URLSession
 
@@ -27,14 +29,43 @@ actor IntentAPIClient {
 
     /// Retrieves the access token from shared keychain
     func getAccessToken() -> String? {
-        let query: [String: Any] = [
+        // Match SharedKeychain's approach - uses kSecAttrAccount, not kSecAttrService
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainServiceName,
             kSecAttrAccount as String: accessTokenKey,
-            kSecAttrAccessGroup as String: keychainAccessGroup,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
+
+        // Only add access group on device (not simulator)
+        #if !targetEnvironment(simulator)
+        query[kSecAttrAccessGroup as String] = keychainAccessGroup
+        #endif
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return token
+    }
+
+    /// Retrieves the refresh token from shared keychain
+    func getRefreshToken() -> String? {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: refreshTokenKey,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        #if !targetEnvironment(simulator)
+        query[kSecAttrAccessGroup as String] = keychainAccessGroup
+        #endif
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -105,14 +136,97 @@ actor IntentAPIClient {
         return try JSONDecoder().decode(MeetingSessionResponse.self, from: data)
     }
 
+    // MARK: - Token Refresh
+
+    /// Attempts to refresh the access token using the refresh token
+    private func refreshAccessToken() async -> String? {
+        guard let refreshToken = getRefreshToken() else {
+            print("[IntentAPIClient] No refresh token available")
+            return nil
+        }
+
+        let url = baseURL.appendingPathComponent("/api/auth/refresh")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = ["refresh_token": refreshToken]
+
+        do {
+            request.httpBody = try JSONEncoder().encode(body)
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("[IntentAPIClient] Token refresh failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+
+            struct TokenResponse: Decodable {
+                let access_token: String
+                let refresh_token: String
+            }
+
+            let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+
+            // Save updated tokens to keychain
+            saveAccessToken(tokenResponse.access_token)
+            saveRefreshToken(tokenResponse.refresh_token)
+
+            print("[IntentAPIClient] Token refreshed successfully")
+            return tokenResponse.access_token
+        } catch {
+            print("[IntentAPIClient] Token refresh error: \(error)")
+            return nil
+        }
+    }
+
+    /// Saves access token to shared keychain
+    private func saveAccessToken(_ token: String) {
+        saveToKeychain(token, forKey: accessTokenKey)
+    }
+
+    /// Saves refresh token to shared keychain
+    private func saveRefreshToken(_ token: String) {
+        saveToKeychain(token, forKey: refreshTokenKey)
+    }
+
+    private func saveToKeychain(_ value: String, forKey key: String) {
+        guard let data = value.data(using: .utf8) else { return }
+
+        // Delete existing
+        var deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key
+        ]
+        #if !targetEnvironment(simulator)
+        deleteQuery[kSecAttrAccessGroup as String] = keychainAccessGroup
+        #endif
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Add new
+        var addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+        #if !targetEnvironment(simulator)
+        addQuery[kSecAttrAccessGroup as String] = keychainAccessGroup
+        #endif
+        SecItemAdd(addQuery as CFDictionary, nil)
+    }
+
     // MARK: - Private Helpers
 
     private func performRequest(
         endpoint: URL,
         method: String,
-        body: [String: Any]? = nil
+        body: [String: Any]? = nil,
+        retryOnAuthFailure: Bool = true
     ) async throws -> Data {
-        guard let token = getAccessToken() else {
+        guard var token = getAccessToken() else {
+            print("[IntentAPIClient] No access token - user needs to sign in")
             throw IntentAPIError.notAuthenticated
         }
 
@@ -126,16 +240,26 @@ actor IntentAPIClient {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
 
+        print("[IntentAPIClient] \(method) \(endpoint.path)")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw IntentAPIError.invalidResponse
         }
 
+        print("[IntentAPIClient] Response status: \(httpResponse.statusCode)")
+
         switch httpResponse.statusCode {
         case 200...299:
             return data
         case 401:
+            // Try to refresh token and retry once
+            if retryOnAuthFailure, let newToken = await refreshAccessToken() {
+                token = newToken
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                return try await performRequest(endpoint: endpoint, method: method, body: body, retryOnAuthFailure: false)
+            }
             throw IntentAPIError.notAuthenticated
         case 403:
             throw IntentAPIError.forbidden

@@ -387,9 +387,9 @@ struct BriefingAPIResponse: Codable {
 
 struct BriefingData: Codable {
     let summary: String
-    let events: [BriefingEvent]?
-    let reminders: [BriefingReminder]?
-    let followUps: [BriefingFollowUp]?
+    let events: BriefingEventsWrapper?
+    let reminders: BriefingRemindersWrapper?
+    let followUps: BriefingFollowUpsWrapper?
     let weather: BriefingWeather?
     let emails: BriefingEmails?
 
@@ -400,6 +400,103 @@ struct BriefingData: Codable {
         case followUps = "follow_ups"
         case weather
         case emails
+    }
+
+    // Convenience accessors for the arrays
+    var eventsList: [BriefingEvent] {
+        events?.items ?? []
+    }
+
+    var remindersList: [BriefingReminder] {
+        reminders?.reminders ?? []
+    }
+
+    var followUpsList: [BriefingFollowUp] {
+        followUps?.followUps ?? []
+    }
+}
+
+// Wrapper for events - can be array or dict with error/events
+struct BriefingEventsWrapper: Codable {
+    let items: [BriefingEvent]
+
+    init(from decoder: Decoder) throws {
+        // Try decoding as array first
+        if let container = try? decoder.singleValueContainer(),
+           let array = try? container.decode([BriefingEvent].self) {
+            items = array
+            return
+        }
+
+        // Try decoding as dict with "events" key
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = (try? container.decode([BriefingEvent].self, forKey: .events)) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(items)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case events
+    }
+}
+
+// Wrapper for reminders - backend returns {"reminders": [...], "count": N}
+struct BriefingRemindersWrapper: Codable {
+    let reminders: [BriefingReminder]
+    let count: Int?
+
+    init(from decoder: Decoder) throws {
+        // Try decoding as dict with "reminders" key
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            reminders = (try? container.decode([BriefingReminder].self, forKey: .reminders)) ?? []
+            count = try? container.decode(Int.self, forKey: .count)
+            return
+        }
+
+        // Try decoding as array
+        if let container = try? decoder.singleValueContainer(),
+           let array = try? container.decode([BriefingReminder].self) {
+            reminders = array
+            count = array.count
+            return
+        }
+
+        reminders = []
+        count = 0
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case reminders
+        case count
+    }
+}
+
+// Wrapper for follow_ups - backend returns {"follow_ups": [...]}
+struct BriefingFollowUpsWrapper: Codable {
+    let followUps: [BriefingFollowUp]
+
+    init(from decoder: Decoder) throws {
+        // Try decoding as dict with "follow_ups" key
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            followUps = (try? container.decode([BriefingFollowUp].self, forKey: .followUps)) ?? []
+            return
+        }
+
+        // Try decoding as array
+        if let container = try? decoder.singleValueContainer(),
+           let array = try? container.decode([BriefingFollowUp].self) {
+            followUps = array
+            return
+        }
+
+        followUps = []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case followUps = "follow_ups"
     }
 }
 
@@ -542,7 +639,7 @@ struct Briefing: Identifiable {
         self.summary = response.briefing.summary
 
         // Convert events to display strings
-        self.events = response.briefing.events?.map { event in
+        self.events = response.briefing.eventsList.map { event in
             var eventStr = event.displayTitle
             if let start = event.start {
                 // Parse time from ISO string
@@ -552,19 +649,19 @@ struct Briefing: Identifiable {
                 }
             }
             return eventStr
-        } ?? []
+        }
 
         // Convert reminders to display strings
-        self.tasks = response.briefing.reminders?.map { reminder in
+        self.tasks = response.briefing.remindersList.map { reminder in
             var taskStr = reminder.title
             if let project = reminder.projectName {
                 taskStr += " (\(project))"
             }
             return taskStr
-        } ?? []
+        }
 
         // Convert follow-ups to display strings
-        self.reminders = response.briefing.followUps?.map { $0.title } ?? []
+        self.reminders = response.briefing.followUpsList.map { $0.title }
 
         // Weather
         self.weather = response.briefing.weather?.displayString

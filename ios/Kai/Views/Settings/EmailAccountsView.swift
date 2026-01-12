@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: - Email Account Model
 
+/// Note: No CodingKeys needed - APIClient uses .convertFromSnakeCase for decoding
 struct EmailAccount: Codable, Identifiable {
     let id: String
     let provider: String
@@ -16,40 +17,26 @@ struct EmailAccount: Codable, Identifiable {
     let lastSync: Date?
     let syncError: String?
     let createdAt: Date
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case provider
-        case emailAddress = "email_address"
-        case displayName = "display_name"
-        case includeInBriefing = "include_in_briefing"
-        case briefingDays = "briefing_days"
-        case priority
-        case maxEmailsInBriefing = "max_emails_in_briefing"
-        case categoriesToInclude = "categories_to_include"
-        case isActive = "is_active"
-        case lastSync = "last_sync"
-        case syncError = "sync_error"
-        case createdAt = "created_at"
-    }
 }
 
+/// Email briefing configuration
+/// Note: No CodingKeys needed - APIClient uses .convertFromSnakeCase
 struct EmailBriefingConfig: Codable {
     let id: String
     var briefingEnabled: Bool
     var morningBriefingTime: String?
     var weekdayAccounts: [String]?
     var weekendAccounts: [String]?
+    var mondayAccounts: [String]?
+    var tuesdayAccounts: [String]?
+    var wednesdayAccounts: [String]?
+    var thursdayAccounts: [String]?
+    var fridayAccounts: [String]?
+    var saturdayAccounts: [String]?
+    var sundayAccounts: [String]?
     var skipDays: [String]?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case briefingEnabled = "briefing_enabled"
-        case morningBriefingTime = "morning_briefing_time"
-        case weekdayAccounts = "weekday_accounts"
-        case weekendAccounts = "weekend_accounts"
-        case skipDays = "skip_days"
-    }
+    var createdAt: String?
+    var updatedAt: String?
 }
 
 struct EmailAccountListResponse: Codable {
@@ -57,16 +44,13 @@ struct EmailAccountListResponse: Codable {
     let count: Int
 }
 
+/// Note: No CodingKeys needed - APIClient uses .convertFromSnakeCase
 struct OAuthStartResponse: Codable {
     let authUrl: String
     let state: String
-
-    enum CodingKeys: String, CodingKey {
-        case authUrl = "auth_url"
-        case state
-    }
 }
 
+/// Note: No CodingKeys needed - APIClient uses .convertToSnakeCase for encoding
 struct EmailAccountUpdateRequest: Codable {
     let displayName: String
     let includeInBriefing: Bool
@@ -74,31 +58,15 @@ struct EmailAccountUpdateRequest: Codable {
     let priority: Int
     let maxEmailsInBriefing: Int
     let isActive: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case displayName = "display_name"
-        case includeInBriefing = "include_in_briefing"
-        case briefingDays = "briefing_days"
-        case priority
-        case maxEmailsInBriefing = "max_emails_in_briefing"
-        case isActive = "is_active"
-    }
 }
 
+/// Note: No CodingKeys needed - APIClient uses .convertToSnakeCase for encoding
 struct EmailBriefingConfigUpdateRequest: Codable {
     let briefingEnabled: Bool
     let morningBriefingTime: String?
     let weekdayAccounts: [String]?
     let weekendAccounts: [String]?
     let skipDays: [String]?
-
-    enum CodingKeys: String, CodingKey {
-        case briefingEnabled = "briefing_enabled"
-        case morningBriefingTime = "morning_briefing_time"
-        case weekdayAccounts = "weekday_accounts"
-        case weekendAccounts = "weekend_accounts"
-        case skipDays = "skip_days"
-    }
 }
 
 struct EmptyBody: Codable {}

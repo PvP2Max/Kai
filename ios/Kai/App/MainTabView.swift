@@ -4,6 +4,7 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .chat
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var networkMonitor: NetworkMonitor
+    @EnvironmentObject var navigationCoordinator: NavigationCoordinator
 
     enum Tab: Int, CaseIterable {
         case chat
@@ -53,14 +54,20 @@ struct MainTabView: View {
                 }
                 .tag(Tab.projects)
 
-            RecordingView { url, title in
-                    // Handle recording completion - upload to backend
-                    print("Recording completed: \(url), title: \(title ?? "Untitled")")
-                }
-                .tabItem {
-                    Label(Tab.record.title, systemImage: Tab.record.icon)
-                }
-                .tag(Tab.record)
+            RecordingView(
+                autoStart: navigationCoordinator.shouldAutoStartRecording,
+                initialTitle: navigationCoordinator.pendingMeetingTitle,
+                meetingId: navigationCoordinator.pendingMeetingId
+            ) { url, title in
+                // Handle recording completion - upload to backend
+                print("Recording completed: \(url), title: \(title ?? "Untitled")")
+                // Reset navigation state after recording starts
+                navigationCoordinator.resetNavigationState()
+            }
+            .tabItem {
+                Label(Tab.record.title, systemImage: Tab.record.icon)
+            }
+            .tag(Tab.record)
 
             MoreView()
                 .tabItem {
@@ -76,6 +83,11 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .notificationTapped)) { notification in
             handleNotificationNavigation(notification)
+        }
+        .onChange(of: navigationCoordinator.showRecordingView) { _, shouldShow in
+            if shouldShow {
+                selectedTab = .record
+            }
         }
     }
 

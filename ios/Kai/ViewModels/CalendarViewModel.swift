@@ -326,14 +326,20 @@ class CalendarViewModel: ObservableObject {
         let event = EKEvent(eventStore: eventStore)
         event.title = backendEvent.title
 
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        if let start = isoFormatter.date(from: backendEvent.start) {
-            event.startDate = start
+        // Parse start date with fallback
+        guard let startDate = parseISO8601Date(backendEvent.start) else {
+            #if DEBUG
+            print("[CalendarViewModel] Could not parse start date for event: \(backendEvent.title) - \(backendEvent.start)")
+            #endif
+            return
         }
-        if let end = isoFormatter.date(from: backendEvent.end) {
-            event.endDate = end
+        event.startDate = startDate
+
+        // Parse end date with fallback (use start + 1 hour if missing)
+        if let endDate = parseISO8601Date(backendEvent.end) {
+            event.endDate = endDate
+        } else {
+            event.endDate = startDate.addingTimeInterval(3600) // 1 hour default
         }
 
         event.isAllDay = backendEvent.isAllDay
@@ -590,6 +596,41 @@ class CalendarViewModel: ObservableObject {
 
         // Remove from local list
         events.removeAll { $0.id == id }
+    }
+
+    // MARK: - Date Parsing Helpers
+
+    /// Parses ISO8601 date strings with multiple format fallbacks
+    private func parseISO8601Date(_ dateString: String) -> Date? {
+        // Try with fractional seconds first
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Try without fractional seconds
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Try with timezone offset format (+00:00)
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+        if let date = dateFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Try basic ISO format
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = dateFormatter.date(from: dateString) {
+            return date
+        }
+
+        return nil
     }
 }
 

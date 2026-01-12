@@ -75,21 +75,25 @@ class SettingsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            // TODO: Replace with actual API call
-            // let user = try await APIClient.shared.getCurrentUser()
+            // Fetch current user from API
+            let fetchedUser: User = try await APIClient.shared.request(.me)
 
-            // Using sample data for now
-            try await Task.sleep(nanoseconds: 300_000_000)
-
-            self.user = User.sample
-            self.userName = user?.name ?? "User"
-            self.userEmail = user?.email ?? "user@example.com"
+            self.user = fetchedUser
+            self.userName = fetchedUser.name
+            self.userEmail = fetchedUser.email
 
             // Load notification preference
             notificationsEnabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")
 
         } catch {
-            errorMessage = error.localizedDescription
+            // Fall back to AuthenticationManager's cached user if API fails
+            if let cachedUser = AuthenticationManager.shared.currentUser {
+                self.user = cachedUser
+                self.userName = cachedUser.name
+                self.userEmail = cachedUser.email
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false

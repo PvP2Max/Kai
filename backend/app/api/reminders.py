@@ -24,6 +24,21 @@ from app.api.deps import get_current_user
 router = APIRouter()
 
 
+def to_naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """
+    Convert a datetime to timezone-naive UTC.
+    PostgreSQL TIMESTAMP WITHOUT TIME ZONE expects naive datetimes.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        # Convert to UTC and strip timezone info
+        from datetime import timezone
+        utc_dt = dt.astimezone(timezone.utc)
+        return utc_dt.replace(tzinfo=None)
+    return dt
+
+
 @router.post("/sync", response_model=ReminderSyncResponse)
 async def sync_reminders(
     sync_data: ReminderSyncRequest,
@@ -64,10 +79,10 @@ async def sync_reminders(
 
             reminder.title = reminder_data.title
             reminder.notes = reminder_data.notes
-            reminder.due_date = reminder_data.due_date
+            reminder.due_date = to_naive_utc(reminder_data.due_date)
             reminder.priority = reminder_data.priority
             reminder.is_completed = reminder_data.is_completed
-            reminder.completed_at = reminder_data.completed_at
+            reminder.completed_at = to_naive_utc(reminder_data.completed_at)
             reminder.list_name = reminder_data.list_name
             reminder.tags = reminder_data.tags
             reminder.project_id = project_id
@@ -81,10 +96,10 @@ async def sync_reminders(
                 apple_reminder_id=reminder_data.apple_reminder_id,
                 title=reminder_data.title,
                 notes=reminder_data.notes,
-                due_date=reminder_data.due_date,
+                due_date=to_naive_utc(reminder_data.due_date),
                 priority=reminder_data.priority,
                 is_completed=reminder_data.is_completed,
-                completed_at=reminder_data.completed_at,
+                completed_at=to_naive_utc(reminder_data.completed_at),
                 list_name=reminder_data.list_name,
                 tags=reminder_data.tags,
                 project_id=project_id,

@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     port: int = 8000
     debug: bool = False
 
+    # Frontend URL for OAuth callbacks
+    frontend_url: str = "http://localhost:5173"
+
     # Audio storage
     audio_upload_dir: str = "/app/audio"
 

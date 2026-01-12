@@ -12,7 +12,49 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Configure push notifications
         configureNotifications(application)
 
+        // Sync reminders when user is authenticated
+        syncRemindersIfAuthenticated()
+
         return true
+    }
+
+    /// Syncs Apple Reminders to Kai backend if user is authenticated and has reminders access
+    private func syncRemindersIfAuthenticated() {
+        Task { @MainActor in
+            // Wait a bit for auth state to stabilize
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+
+            guard AuthenticationManager.shared.isAuthenticated else {
+                #if DEBUG
+                print("[AppDelegate] Skipping reminders sync - not authenticated")
+                #endif
+                return
+            }
+
+            let remindersManager = RemindersManager.shared
+
+            // Check if we have reminders access
+            remindersManager.checkAuthorizationStatus()
+
+            guard remindersManager.isAuthorized else {
+                #if DEBUG
+                print("[AppDelegate] Skipping reminders sync - not authorized")
+                #endif
+                return
+            }
+
+            // Sync reminders to backend
+            do {
+                let result = try await remindersManager.syncToBackend()
+                #if DEBUG
+                print("[AppDelegate] Reminders synced: \(result.syncedCount) total, \(result.createdCount) new")
+                #endif
+            } catch {
+                #if DEBUG
+                print("[AppDelegate] Reminders sync failed: \(error)")
+                #endif
+            }
+        }
     }
 
     // MARK: - Push Notification Registration

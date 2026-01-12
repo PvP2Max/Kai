@@ -10,6 +10,8 @@ import Foundation
 
 // MARK: - Reminder Model for Sync
 
+/// Reminder model for syncing to backend
+/// Note: No CodingKeys needed - APIClient uses .convertToSnakeCase/.convertFromSnakeCase
 struct SyncableReminder: Codable {
     let appleReminderId: String
     let title: String
@@ -20,36 +22,18 @@ struct SyncableReminder: Codable {
     let completedAt: Date?
     let listName: String?
     let tags: [String]?
-
-    enum CodingKeys: String, CodingKey {
-        case appleReminderId = "apple_reminder_id"
-        case title
-        case notes
-        case dueDate = "due_date"
-        case priority
-        case isCompleted = "is_completed"
-        case completedAt = "completed_at"
-        case listName = "list_name"
-        case tags
-    }
 }
 
 struct ReminderSyncRequest: Codable {
     let reminders: [SyncableReminder]
 }
 
+/// Note: No CodingKeys needed - APIClient uses .convertFromSnakeCase
 struct ReminderSyncResponse: Codable {
     let syncedCount: Int
     let createdCount: Int
     let updatedCount: Int
     let deletedCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case syncedCount = "synced_count"
-        case createdCount = "created_count"
-        case updatedCount = "updated_count"
-        case deletedCount = "deleted_count"
-    }
 }
 
 // MARK: - Reminders Manager

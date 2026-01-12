@@ -19,8 +19,9 @@ enum SharedKeychain {
         static let refreshToken = "com.kai.refreshToken"
     }
 
-    /// App Group identifier - must match the main app's KeychainManager.
-    private static let appGroupIdentifier = "group.com.kai.shared"
+    /// Keychain access group - must match entitlements in both app and extension.
+    /// Note: For keychain sharing, we use the keychain-access-groups value, not app-groups.
+    private static let keychainAccessGroup = "com.arcticauradesigns.kai.shared"
 
     // MARK: - Access Token
 
@@ -87,7 +88,7 @@ enum SharedKeychain {
 
         // Add access group for sharing
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = appGroupIdentifier
+        query[kSecAttrAccessGroup as String] = keychainAccessGroup
         #endif
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -103,7 +104,7 @@ enum SharedKeychain {
         ]
 
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = appGroupIdentifier
+        query[kSecAttrAccessGroup as String] = keychainAccessGroup
         #endif
 
         var result: AnyObject?
@@ -125,7 +126,7 @@ enum SharedKeychain {
         ]
 
         #if !targetEnvironment(simulator)
-        query[kSecAttrAccessGroup as String] = appGroupIdentifier
+        query[kSecAttrAccessGroup as String] = keychainAccessGroup
         #endif
 
         SecItemDelete(query as CFDictionary)

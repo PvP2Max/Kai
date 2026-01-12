@@ -11,6 +11,15 @@ struct RecordingView: View {
 
     // MARK: - Properties
 
+    /// Whether to automatically start recording (from Siri)
+    var autoStart: Bool = false
+
+    /// Initial title (from Siri or calendar)
+    var initialTitle: String?
+
+    /// Meeting ID from backend (if pre-created)
+    var meetingId: String?
+
     let onRecordingComplete: (URL, String?) async -> Void
 
     // MARK: - State
@@ -20,6 +29,7 @@ struct RecordingView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var isUploading: Bool = false
+    @State private var hasAutoStarted: Bool = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -76,6 +86,35 @@ struct RecordingView: View {
                 Text(errorMessage)
             }
             .interactiveDismissDisabled(recordingService.isRecording || isUploading)
+            .onAppear {
+                // Set initial title if provided
+                if let initial = initialTitle, meetingTitle.isEmpty {
+                    meetingTitle = initial
+                }
+
+                // Auto-start recording if requested (from Siri)
+                if autoStart && !hasAutoStarted && !recordingService.isRecording {
+                    hasAutoStarted = true
+                    Task {
+                        do {
+                            let title = meetingTitle.isEmpty ? nil : meetingTitle
+                            try await recordingService.startRecording(for: title)
+                            #if DEBUG
+                            print("[RecordingView] Auto-started recording from Siri")
+                            #endif
+                        } catch {
+                            errorMessage = error.localizedDescription
+                            showError = true
+                        }
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .stopRecordingRequested)) { _ in
+                // Handle stop recording from Siri
+                Task {
+                    await handleRecordButtonTap()
+                }
+            }
         }
     }
 

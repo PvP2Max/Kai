@@ -9,13 +9,15 @@ struct KaiAppShortcuts: AppShortcutsProvider {
 
     static var appShortcuts: [AppShortcut] {
         // Ask Kai - Main conversational shortcut
+        // Note: Can't use \(\.$message) in phrases - String params not supported
         AppShortcut(
             intent: AskKaiIntent(),
             phrases: [
                 "Ask \(.applicationName) something",
+                "Ask \(.applicationName) a question",
                 "Hey \(.applicationName)",
                 "Talk to \(.applicationName)",
-                "Ask \(.applicationName)"
+                "Help me \(.applicationName)"
             ],
             shortTitle: "Ask Kai",
             systemImageName: "brain.head.profile"
@@ -82,9 +84,13 @@ struct KaiAppShortcuts: AppShortcutsProvider {
             intent: CreateEventIntent(),
             phrases: [
                 "\(.applicationName) create an event",
+                "\(.applicationName) create an appointment",
+                "\(.applicationName) schedule an appointment",
                 "Schedule something with \(.applicationName)",
                 "\(.applicationName) add to calendar",
-                "Create meeting with \(.applicationName)"
+                "Create meeting with \(.applicationName)",
+                "Create appointment with \(.applicationName)",
+                "\(.applicationName) add an event"
             ],
             shortTitle: "Create Event",
             systemImageName: "calendar.badge.plus"
